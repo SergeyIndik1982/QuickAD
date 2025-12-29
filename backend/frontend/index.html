@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MarketMind</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: #0f172a;
+  color: #f8fafc;
+}
+
+.app {
+  max-width: 420px;
+  margin: auto;
+  padding: 16px;
+}
+
+.card {
+  background: #1e293b;
+  padding: 16px;
+  border-radius: 14px;
+}
+
+label {
+  font-size: 12px;
+  color: #94a3b8;
+  display: block;
+  margin-top: 12px;
+}
+
+select, button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 6px;
+  border-radius: 10px;
+  border: none;
+  background: #020617;
+  color: white;
+}
+
+button {
+  margin-top: 16px;
+  background: #6366f1;
+  font-weight: 600;
+}
+
+/* Bottom sheet */
+.sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: -100%;
+  background: #020617;
+  border-radius: 20px 20px 0 0;
+  padding: 16px;
+  min-height: 40vh;
+  transition: bottom .3s ease;
+}
+
+.sheet.open {
+  bottom: 0;
+}
+
+.handle {
+  width: 40px;
+  height: 4px;
+  background: #475569;
+  margin: auto;
+  border-radius: 2px;
+}
+
+.output {
+  white-space: pre-wrap;
+  font-size: 16px;
+  margin-top: 12px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+  <h3>QuickAD</h3>
+
+  <div class="card">
+    <label>Business</label>
+    <select id="business">
+      <option value="coffee shop">Coffee shop</option>
+      <option value="car dealer">Car dealer</option>
+      <option value="real estate agency">Real estate</option>
+    </select>
+
+    <label>Tone</label>
+    <select id="tone">
+      <option value="friendly">Friendly</option>
+      <option value="luxury">Luxury</option>
+      <option value="urgent">Urgent</option>
+    </select>
+
+    <label>Platform</label>
+    <select id="platform">
+      <option value="Instagram">Instagram</option>
+      <option value="Facebook">Facebook</option>
+      <option value="LinkedIn">LinkedIn</option>
+    </select>
+
+    <button onclick="generate()">Generate</button>
+  </div>
+</div>
+
+<div class="sheet" id="sheet">
+  <div class="handle"></div>
+  <div class="output" id="output">Generating…</div>
+</div>
+
+<script>
+async function generate() {
+  const sheet = document.getElementById("sheet");
+  const output = document.getElementById("output");
+
+  sheet.classList.add("open");
+  output.textContent = "Generating…";
+
+  try {
+    const res = await fetch("/generate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+    business_type: business.value,
+    tone: tone.value,
+    platform: platform.value
+      })
+    });
+
+    const data = await res.json();
+
+    // 🔥 DEBUG — ПОКАЖЕМ ВСЁ
+    console.log("BACKEND RESPONSE:", data);
+    output.textContent = data.post;
+
+
+  } catch (e) {
+    output.textContent = "Frontend error: " + e;
+  }
+}
+</script>
+
+</body>
+</html>
