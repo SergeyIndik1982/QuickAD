@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>QuickAD</title>
+</head>
+<body>
+  <h1>QuickAD 🚀</h1>
+
+  <input id="business" placeholder="Business type"><br><br>
+  <input id="tone" placeholder="Tone"><br><br>
+  <input id="platform" placeholder="Platform"><br><br>
+
+  <button onclick="generate()">Generate</button>
+
+  <pre id="result"></pre>
+
+  <script>
+    async function generate() {
+      const res = await fetch("/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          business_type: document.getElementById("business").value,
+          tone: document.getElementById("tone").value,
+          platform: document.getElementById("platform").value
+        })
+      });
+
+      const data = await res.json();
+      document.getElementById("result").innerText =
+        data.post || data.detail;
+    }
+  </script>
+</body>
+</html>
