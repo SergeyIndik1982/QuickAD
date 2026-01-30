@@ -1,66 +1,102 @@
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
 import os
+from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
+from pydantic import BaseModel
+import google.generativeai as genai
 
-# =====================
-# AI CONFIG (SAFE)
-# =====================
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+# --------------------
+# CONFIG
+# --------------------
 
-model = None
-model_error = None
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-if GOOGLE_API_KEY:
-    try:
-        import google.generativeai as genai
-        genai.configure(api_key=GOOGLE_API_KEY)
-        model = genai.GenerativeModel("gemini-1.5-flash")
-    except Exception as e:
-        model_error = str(e)
-else:
-    model_error = "GOOGLE_API_KEY not set"
-
-# =====================
-# APP
-# =====================
 app = FastAPI()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+model = genai.GenerativeModel(
+    model_name="gemini-1.5-flash",
+    system_instruction="""
+You are a real person connected to a cafe.
+You are NOT a marketer and NOT writing ads.
+
+Write short, casual observations.
+They may feel unfinished.
+
+Rules:
+- calm
+- simple
+- slightly ironic at times
+- never promotional
+
+Forbidden:
+- calls to action
+- exclamation marks
+- emojis
+- marketing language
+- positive conclusions
+
+Do not explain.
+Do not conclude.
+If unsure, write less.
+"""
 )
 
-# =====================
-# STATIC FRONTEND
-# =====================
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
+# --------------------
+# HELPERS
+# --------------------
 
-# =====================
+def build_user_prompt(speaker, mood, occasion, variants):
+    return f"""
+Who is speaking: {speaker}
+Mood: {mood}
+Occasion: {occasion}
+
+Generate {variants} short texts.
+Each text:
+- 2–4 lines
+- separated by ---
+- unfinished
+"""
+
+# --------------------
 # SCHEMA
-# =====================
+# --------------------
+
 class GenerateRequest(BaseModel):
-    business_type: str
-    tone: str
-    platform: str
+    speaker: str
+    mood: str
+    occasion: str
+    variants: int = 3
 
-# =====================
-# API
-# =====================
+# --------------------
+# ROUTES
+# --------------------
+
+@app.get("/", response_class=HTMLResponse)
+def index():
+    with open("index.html", "r", encoding="utf-8") as f:
+        return f.read()
+
 @app.post("/generate")
-def generate(req: GenerateRequest):
-    if not model:
-        raise HTTPException(status_code=500, detail=model_error)
-
-    prompt = (
-        f"Write a short {req.platform} marketing post.\n\n"
-        f"Business: {req.business_type}\n"
-        f"Tone: {req.tone}\n\n"
-        f"Use emojis. Plain text only."
+def generate(data: GenerateRequest):
+    response = model.generate_content(
+        build_user_prompt(
+            data.speaker,
+            data.mood,
+            data.occasion,
+            data.variants
+        ),
+        generation_config={
+            "temperature": 0.8,
+            "max_output_tokens": 300
+        }
     )
 
-    response = model.generate_content(prompt)
-    return {"post": response.text}
+    raw = response.text or ""
+    texts = [t.strip() for t in raw.split("---") if t.strip()]
+
+    return {"texts": texts}
+
+# --------------------
+# RUN
+# --------------------
+# uvicorn main:app --reload

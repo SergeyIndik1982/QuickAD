@@ -1,36 +1,96 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>QuickAD</title>
+<meta charset="UTF-8">
+<title>Quickad</title>
+<style>
+body {
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #fafafa;
+  color: #222;
+  max-width: 700px;
+  margin: 40px auto;
+}
+select, button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 10px;
+  font-size: 16px;
+}
+button {
+  background: #111;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+.card {
+  background: white;
+  padding: 16px;
+  margin-top: 12px;
+  border-radius: 8px;
+  white-space: pre-line;
+}
+.small {
+  color: #777;
+  font-size: 14px;
+}
+</style>
 </head>
+
 <body>
-  <h1>QuickAD 🚀</h1>
 
-  <input id="business" placeholder="Business type"><br><br>
-  <input id="tone" placeholder="Tone"><br><br>
-  <input id="platform" placeholder="Platform"><br><br>
+<h1>Cafe notes</h1>
+<p class="small">Not ads. Just thoughts.</p>
 
-  <button onclick="generate()">Generate</button>
+<select id="speaker">
+  <option>Barista</option>
+  <option>Owner</option>
+  <option>Guest</option>
+</select>
 
-  <pre id="result"></pre>
+<select id="mood">
+  <option>Calm</option>
+  <option>Slightly tired</option>
+  <option>Neutral</option>
+</select>
 
-  <script>
-    async function generate() {
-      const res = await fetch("/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          business_type: document.getElementById("business").value,
-          tone: document.getElementById("tone").value,
-          platform: document.getElementById("platform").value
-        })
-      });
+<select id="occasion">
+  <option>Ordinary day</option>
+  <option>Morning</option>
+  <option>Rain</option>
+</select>
 
-      const data = await res.json();
-      document.getElementById("result").innerText =
-        data.post || data.detail;
-    }
-  </script>
+<button onclick="generate()">Write</button>
+
+<div id="results"></div>
+
+<script>
+async function generate() {
+  const results = document.getElementById("results");
+  results.innerHTML = "…";
+
+  const res = await fetch("/generate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      speaker: speaker.value,
+      mood: mood.value,
+      occasion: occasion.value,
+      variants: 3
+    })
+  });
+
+  const data = await res.json();
+  results.innerHTML = "";
+
+  data.texts.forEach(text => {
+    const div = document.createElement("div");
+    div.className = "card";
+    div.innerText = text;
+    results.appendChild(div);
+  });
+}
+</script>
+
 </body>
 </html>
