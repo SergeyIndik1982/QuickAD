@@ -10,7 +10,7 @@ import google.generativeai as genai
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
 app = FastAPI()
-
+ 
 model = genai.GenerativeModel(
     model_name="gemini-1.5-flash",
     system_instruction="""
@@ -69,7 +69,7 @@ class GenerateRequest(BaseModel):
 # --------------------
 @app.get("/", response_class=HTMLResponse)
 def index():
-    with open("index.html", "r", encoding="utf-8") as f:
+    with open("static/index.html", "r", encoding="utf-8") as f:
         return f.read()
 
 @app.post("/generate")
