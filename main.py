@@ -73,7 +73,7 @@ class GenerateRequest(BaseModel):
 
 @app.get("/", response_class=HTMLResponse)
 def index():
-    with open("index.html", "r", encoding="utf-8") as f:
+    with open("static/index.html", "r", encoding="utf-8") as f:
         return f.read()
 
 @app.post("/generate")
