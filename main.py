@@ -5,9 +5,8 @@ from pydantic import BaseModel
 import google.generativeai as genai
 
 # --------------------
-# CONFIGk
+# CONFIG
 # --------------------
-
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
 app = FastAPI()
@@ -43,7 +42,6 @@ If unsure, write less.
 # --------------------
 # HELPERS
 # --------------------
-
 def build_user_prompt(speaker, mood, occasion, variants):
     return f"""
 Who is speaking: {speaker}
@@ -60,7 +58,6 @@ Each text:
 # --------------------
 # SCHEMA
 # --------------------
-
 class GenerateRequest(BaseModel):
     speaker: str
     mood: str
@@ -70,29 +67,30 @@ class GenerateRequest(BaseModel):
 # --------------------
 # ROUTES
 # --------------------
-
 @app.get("/", response_class=HTMLResponse)
 def index():
-    with open("static/index.html", "r", encoding="utf-8") as f:
+    with open("index.html", "r", encoding="utf-8") as f:
         return f.read()
 
 @app.post("/generate")
 def generate(data: GenerateRequest):
-    response = model.generate_content(
-        build_user_prompt(
-            data.speaker,
-            data.mood,
-            data.occasion,
-            data.variants
-        ),
-        generation_config={
-            "temperature": 0.8,
-            "max_output_tokens": 300
-        }
-    )
-
-    raw = response.text or ""
-    texts = [t.strip() for t in raw.split("---") if t.strip()]
+    try:
+        response = model.generate_content(
+            build_user_prompt(
+                data.speaker,
+                data.mood,
+                data.occasion,
+                data.variants
+            ),
+            generation_config={
+                "temperature": 0.8,
+                "max_output_tokens": 300
+            }
+        )
+        raw = response.text or ""
+        texts = [t.strip() for t in raw.split("---") if t.strip()]
+    except Exception as e:
+        texts = ["Something went wrong."]
 
     return {"texts": texts}
 

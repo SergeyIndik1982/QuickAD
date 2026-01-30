@@ -67,28 +67,37 @@ button {
 <script>
 async function generate() {
   const results = document.getElementById("results");
-  results.innerHTML = "…";
+  results.innerHTML = "<p>Writing…</p>";
 
-  const res = await fetch("/generate", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      speaker: speaker.value,
-      mood: mood.value,
-      occasion: occasion.value,
-      variants: 3
-    })
-  });
+  const speakerEl = document.getElementById("speaker");
+  const moodEl = document.getElementById("mood");
+  const occasionEl = document.getElementById("occasion");
 
-  const data = await res.json();
-  results.innerHTML = "";
+  try {
+    const res = await fetch("/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        speaker: speakerEl.value,
+        mood: moodEl.value,
+        occasion: occasionEl.value,
+        variants: 3
+      })
+    });
 
-  data.texts.forEach(text => {
-    const div = document.createElement("div");
-    div.className = "card";
-    div.innerText = text;
-    results.appendChild(div);
-  });
+    const data = await res.json();
+    results.innerHTML = "";
+
+    data.texts.forEach(text => {
+      const div = document.createElement("div");
+      div.className = "card";
+      div.innerText = text;
+      results.appendChild(div);
+    });
+  } catch (err) {
+    results.innerHTML = "<p style='color:red'>Something went wrong.</p>";
+    console.error(err);
+  }
 }
 </script>
 
