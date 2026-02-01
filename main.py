@@ -2,18 +2,17 @@ import os
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
-import google.generativeai as genai
+from google import genai
+import traceback
 
 # --------------------
 # CONFIG
 # --------------------
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 app = FastAPI()
- 
-model = genai.GenerativeModel(
-    model_name="gemini-1.5-flash",
-    system_instruction="""
+
+SYSTEM_PROMPT = """
 You are a real person connected to a cafe.
 You are NOT a marketer and NOT writing ads.
 
@@ -37,13 +36,14 @@ Do not explain.
 Do not conclude.
 If unsure, write less.
 """
-)
 
 # --------------------
 # HELPERS
 # --------------------
-def build_user_prompt(speaker, mood, occasion, variants):
-    return f"""
+
+def build_prompt(speaker, mood, occasion, variants):
+    return f"""{SYSTEM_PROMPT}
+
 Who is speaking: {speaker}
 Mood: {mood}
 Occasion: {occasion}
@@ -58,6 +58,7 @@ Each text:
 # --------------------
 # SCHEMA
 # --------------------
+
 class GenerateRequest(BaseModel):
     speaker: str
     mood: str
@@ -67,42 +68,33 @@ class GenerateRequest(BaseModel):
 # --------------------
 # ROUTES
 # --------------------
+
 @app.get("/", response_class=HTMLResponse)
 def index():
-    with open("static/index.html", "r", encoding="utf-8") as f:
+    with open("index.html", "r", encoding="utf-8") as f:
         return f.read()
-
-import traceback
 
 @app.post("/generate")
 def generate(data: GenerateRequest):
     try:
-        prompt = build_user_prompt(
+        prompt = build_prompt(
             data.speaker,
             data.mood,
             data.occasion,
             data.variants
         )
 
-        print("PROMPT SENT TO GEMINI:")
-        print(prompt)
-
-        response = model.generate_content(
-            prompt,
-            generation_config={
+        response = client.models.generate_content(
+            model="models/gemini-1.5-flash",
+            contents=prompt,
+            config={
                 "temperature": 0.8,
-                "max_output_tokens": 300
+                "max_output_tokens": 300,
             }
         )
 
-        print("RAW RESPONSE:")
-        print(response)
-
-        raw_text = response.text
-        print("TEXT:")
-        print(raw_text)
-
-        texts = [t.strip() for t in raw_text.split("---") if t.strip()]
+        raw = response.text or ""
+        texts = [t.strip() for t in raw.split("---") if t.strip()]
 
         return {"texts": texts}
 
@@ -110,11 +102,7 @@ def generate(data: GenerateRequest):
         print("=== GEMINI ERROR ===")
         print(e)
         traceback.print_exc()
-
-        return {
-            "texts": ["[ERROR] Check server logs"],
-            "error": str(e)
-        }
+        return {"texts": ["[ERROR] Check server logs"]}
 
 # --------------------
 # RUN
