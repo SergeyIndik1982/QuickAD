@@ -72,27 +72,49 @@ def index():
     with open("static/index.html", "r", encoding="utf-8") as f:
         return f.read()
 
+import traceback
+
 @app.post("/generate")
 def generate(data: GenerateRequest):
     try:
+        prompt = build_user_prompt(
+            data.speaker,
+            data.mood,
+            data.occasion,
+            data.variants
+        )
+
+        print("PROMPT SENT TO GEMINI:")
+        print(prompt)
+
         response = model.generate_content(
-            build_user_prompt(
-                data.speaker,
-                data.mood,
-                data.occasion,
-                data.variants
-            ),
+            prompt,
             generation_config={
                 "temperature": 0.8,
                 "max_output_tokens": 300
             }
         )
-        raw = response.text or ""
-        texts = [t.strip() for t in raw.split("---") if t.strip()]
-    except Exception as e:
-        texts = ["Something went wrong."]
 
-    return {"texts": texts}
+        print("RAW RESPONSE:")
+        print(response)
+
+        raw_text = response.text
+        print("TEXT:")
+        print(raw_text)
+
+        texts = [t.strip() for t in raw_text.split("---") if t.strip()]
+
+        return {"texts": texts}
+
+    except Exception as e:
+        print("=== GEMINI ERROR ===")
+        print(e)
+        traceback.print_exc()
+
+        return {
+            "texts": ["[ERROR] Check server logs"],
+            "error": str(e)
+        }
 
 # --------------------
 # RUN
