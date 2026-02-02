@@ -7,8 +7,8 @@ import openai
 # --------------------
 # CONFIG
 # --------------------
-# Make sure your OpenAI key is set as an environment variable in Railway
-openai.api_key = os.getenv("OPENAI_API_KEY")
+# API ключ берется из переменной окружения OPENAI_API_KEY на Railway
+client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 app = FastAPI()
 
@@ -22,7 +22,7 @@ class GenerateRequest(BaseModel):
     variants: int = 3
 
 # --------------------
-# HELPERS
+# SYSTEM PROMPT
 # --------------------
 SYSTEM_PROMPT = """
 You are a real person connected to a cafe.
@@ -49,6 +49,9 @@ Do not conclude.
 If unsure, write less.
 """
 
+# --------------------
+# HELPERS
+# --------------------
 def build_user_prompt(speaker, mood, occasion, variants):
     return f"""
 Who is speaking: {speaker}
@@ -73,16 +76,17 @@ def index():
 @app.post("/generate")
 def generate(data: GenerateRequest):
     try:
-        prompt = SYSTEM_PROMPT + build_user_prompt(
-            data.speaker, data.mood, data.occasion, data.variants
-        )
+        # Формируем сообщения для Chat API
+        messages = [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": build_user_prompt(
+                data.speaker, data.mood, data.occasion, data.variants
+            )}
+        ]
 
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
-            messages=[{"role": "system", "content": SYSTEM_PROMPT},
-                      {"role": "user", "content": build_user_prompt(
-                          data.speaker, data.mood, data.occasion, data.variants
-                      )}],
+            messages=messages,
             temperature=0.8,
             max_tokens=300
         )
