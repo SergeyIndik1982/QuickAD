@@ -58,21 +58,26 @@ async def generate(data: GenerateRequest):
     prompt = build_prompt(data.speaker, data.mood, data.occasion)
     texts = []
 
+    # Используем одну из самых стабильных моделей в бесплатном API
+    # Она лучше понимает промпты, чем distilgpt2
+    model_id = "mistralai/Mistral-7B-v0.1" 
+    
     for _ in range(data.variants):
         try:
-            # Вызов API (теперь это не грузит твой сервер)
+            # wait_for_model=True заставит API подождать, пока модель загрузится, 
+            # а не выкидывать ошибку сразу
             output = client.text_generation(
                 prompt,
+                model=model_id,
                 max_new_tokens=50,
                 do_sample=True,
                 temperature=0.8,
-                top_p=0.9,
+                wait_for_model=True 
             )
-            # Очищаем текст от промпта, если API его вернуло
-            clean_text = output.strip()
-            texts.append(clean_text)
+            texts.append(output.strip())
         except Exception as e:
-            print(f"Error: {e}")
-            texts.append("The machine is tired. Try again later.")
+            # Печатаем ПОЛНУЮ ошибку в логи Railway
+            print(f"CRITICAL ERROR: {str(e)}")
+            texts.append("Observation failed. The barista is busy.")
 
     return {"texts": texts}
