@@ -16,7 +16,7 @@ app.add_middleware(
 
 HF_TOKEN = os.getenv("HF_TOKEN")
 # Используем GPT-2 как самую быструю
-API_URL = "https://router.huggingface.co/hf-inference/models/mistralai/Mistral-7B-Instruct-v0.3"
+API_URL = "https://api-inference.huggingface.co/models/meta-llama/Meta-Llama-3-8B-Instruct"
 HEADERS = {"Authorization": f"Bearer {HF_TOKEN}"}
 
 class GenerateRequest(BaseModel):
@@ -32,12 +32,16 @@ def index():
 
 @app.post("/generate")
 async def generate(data: GenerateRequest):
-    # Промпт для Mistral лучше делать коротким и четким
-    prompt = f"<s>[INST] Context: Cafe. Speaker: {data.speaker}. Mood: {data.mood}. Write one short casual observation sentence. No emojis. [/INST]"
+    # Промпт для Llama 3
+    prompt = f"<|begin_of_text|><|start_header_id|>user<|end_header_id|>\n\nContext: Cafe. Speaker: {data.speaker}. Mood: {data.mood}. Write one short casual observation sentence without emojis.<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
     texts = []
     
     token = os.getenv("HF_TOKEN")
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+        "x-wait-for-model": "true"  # Заставляем API подождать загрузки модели
+    }
 
     for _ in range(data.variants):
         try:
@@ -47,32 +51,25 @@ async def generate(data: GenerateRequest):
                 json={
                     "inputs": prompt, 
                     "parameters": {
-                        "max_new_tokens": 50, 
-                        "return_full_text": False,
-                        "temperature": 0.7
+                        "max_new_tokens": 40, 
+                        "temperature": 0.6,
+                        "top_p": 0.9
                     }
                 },
-                timeout=25
+                timeout=30 # Увеличиваем таймаут для Llama
             )
             
             if response.status_code == 200:
                 result = response.json()
-                # Новые модели часто возвращают список со словарем
-                if isinstance(result, list):
-                    text = result[0].get("generated_text", "").strip()
-                else:
-                    text = result.get("generated_text", "").strip()
-                texts.append(text if text else "The coffee is getting cold.")
-            
-            elif response.status_code == 503:
-                texts.append("Model is loading... Please wait 15 seconds and try again.")
-            
+                # Извлекаем текст
+                raw_text = result[0].get("generated_text", "")
+                # Убираем промпт, если он вернулся (Llama иногда это делает)
+                clean_text = raw_text.split("assistant")[-1].strip() if "assistant" in raw_text else raw_text
+                texts.append(clean_text if clean_text else "Just another day.")
             else:
-                # Если будет ошибка, мы выведем её детали
-                error_detail = response.text[:100]
-                texts.append(f"Status {response.status_code}: {error_detail}")
+                texts.append(f"Status {response.status_code}: {response.text[:50]}")
                 
         except Exception as e:
-            texts.append(f"Connection error: {str(e)[:30]}")
+            texts.append(f"Connection Error: {str(e)[:30]}")
 
     return {"texts": texts}
