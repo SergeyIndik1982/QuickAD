@@ -1,16 +1,24 @@
 import os
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import openai
+from transformers import pipeline, set_seed
 
 # --------------------
 # CONFIG
 # --------------------
-# API ключ берется из переменной окружения OPENAI_API_KEY на Railway
-client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Initialize Hugging Face generator
+generator = pipeline("text-generation", model="distilgpt2")
+set_seed(42)  # For reproducible results
 
 # --------------------
 # SCHEMA
@@ -22,9 +30,10 @@ class GenerateRequest(BaseModel):
     variants: int = 3
 
 # --------------------
-# SYSTEM PROMPT
+# HELPERS
 # --------------------
-SYSTEM_PROMPT = """
+def build_prompt(speaker, mood, occasion):
+    return f"""
 You are a real person connected to a cafe.
 You are NOT a marketer and NOT writing ads.
 
@@ -47,54 +56,28 @@ Forbidden:
 Do not explain.
 Do not conclude.
 If unsure, write less.
-"""
 
-# --------------------
-# HELPERS
-# --------------------
-def build_user_prompt(speaker, mood, occasion, variants):
-    return f"""
-Who is speaking: {speaker}
+Context:
+Speaker: {speaker}
 Mood: {mood}
 Occasion: {occasion}
-
-Generate {variants} short texts.
-Each text:
-- 2–4 lines
-- separated by ---
-- unfinished
 """
 
 # --------------------
 # ROUTES
 # --------------------
-@app.get("/", response_class=HTMLResponse)
-def index():
-    with open("static/index.html", "r", encoding="utf-8") as f:
-        return f.read()
+@app.get("/")
+def root():
+    return {"status": "QuickAD alive"}
 
 @app.post("/generate")
 def generate(data: GenerateRequest):
-    try:
-        # Формируем сообщения для Chat API
-        messages = [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": build_user_prompt(
-                data.speaker, data.mood, data.occasion, data.variants
-            )}
-        ]
-
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=messages,
-            temperature=0.8,
-            max_tokens=150
-        )
-
-        raw_text = response.choices[0].message.content
-        texts = [t.strip() for t in raw_text.split("---") if t.strip()]
-
-    except Exception as e:
-        texts = [f"Something went wrong: {e}"]
-
+    prompt = build_prompt(data.speaker, data.mood, data.occasion)
+    texts = []
+    
+    for _ in range(data.variants):
+        result = generator(prompt, max_length=50, num_return_sequences=1)
+        text = result[0]['generated_text'].replace(prompt, '').strip()
+        texts.append(text)
+    
     return {"texts": texts}
