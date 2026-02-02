@@ -57,27 +57,23 @@ def index():
 async def generate(data: GenerateRequest):
     prompt = build_prompt(data.speaker, data.mood, data.occasion)
     texts = []
-
-    # Используем одну из самых стабильных моделей в бесплатном API
-    # Она лучше понимает промпты, чем distilgpt2
-    model_id = "mistralai/Mistral-7B-v0.1" 
     
+    # gpt2 — самая быстрая и безотказная для тестов
+    model_id = "gpt2" 
+
     for _ in range(data.variants):
         try:
-            # wait_for_model=True заставит API подождать, пока модель загрузится, 
-            # а не выкидывать ошибку сразу
-            output = client.text_generation(
+            # Убрали wait_for_model, так как он вызвал ошибку
+            response = client.text_generation(
                 prompt,
                 model=model_id,
                 max_new_tokens=50,
                 do_sample=True,
                 temperature=0.8,
-                wait_for_model=True 
             )
-            texts.append(output.strip())
+            texts.append(response.strip())
         except Exception as e:
-            # Печатаем ПОЛНУЮ ошибку в логи Railway
             print(f"CRITICAL ERROR: {str(e)}")
-            texts.append("Observation failed. The barista is busy.")
+            texts.append("The barista is cleaning the counter. Try again.")
 
     return {"texts": texts}
