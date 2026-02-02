@@ -16,7 +16,7 @@ app.add_middleware(
 
 HF_TOKEN = os.getenv("HF_TOKEN")
 # Используем GPT-2 как самую быструю
-API_URL = "https://api-inference.huggingface.co/models/meta-llama/Meta-Llama-3-8B-Instruct"
+API_URL = "https://api-inference.huggingface.co/models/meta-llama/Llama-3.2-1B-Instruct"
 HEADERS = {"Authorization": f"Bearer {HF_TOKEN}"}
 
 class GenerateRequest(BaseModel):
@@ -32,44 +32,44 @@ def index():
 
 @app.post("/generate")
 async def generate(data: GenerateRequest):
-    # Промпт для Llama 3
-    prompt = f"<|begin_of_text|><|start_header_id|>user<|end_header_id|>\n\nContext: Cafe. Speaker: {data.speaker}. Mood: {data.mood}. Write one short casual observation sentence without emojis.<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
-    texts = []
+    # Промпт для новой Llama 3.2
+    prompt = f"User: Write a short, casual, ironic cafe observation from a {data.speaker} in a {data.mood} mood. No emojis. One sentence.\nAssistant:"
     
     token = os.getenv("HF_TOKEN")
     headers = {
         "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json",
-        "x-wait-for-model": "true"  # Заставляем API подождать загрузки модели
+        "Content-Type": "application/json"
     }
 
+    texts = []
     for _ in range(data.variants):
         try:
-            response = requests.post(
-                API_URL, 
-                headers=headers, 
-                json={
-                    "inputs": prompt, 
-                    "parameters": {
-                        "max_new_tokens": 40, 
-                        "temperature": 0.6,
-                        "top_p": 0.9
-                    }
+            # Hugging Face теперь требует передавать параметры внутри 'parameters'
+            payload = {
+                "inputs": prompt,
+                "parameters": {
+                    "max_new_tokens": 50,
+                    "temperature": 0.7,
+                    "return_full_text": False
                 },
-                timeout=30 # Увеличиваем таймаут для Llama
-            )
+                "options": {
+                    "wait_for_model": True # Теперь это передается в 'options'
+                }
+            }
+
+            response = requests.post(API_URL, headers=headers, json=payload, timeout=30)
             
             if response.status_code == 200:
                 result = response.json()
-                # Извлекаем текст
-                raw_text = result[0].get("generated_text", "")
-                # Убираем промпт, если он вернулся (Llama иногда это делает)
-                clean_text = raw_text.split("assistant")[-1].strip() if "assistant" in raw_text else raw_text
-                texts.append(clean_text if clean_text else "Just another day.")
+                # Обработка ответа (может быть списком или словарем)
+                text = result[0].get("generated_text", "") if isinstance(result, list) else result.get("generated_text", "")
+                texts.append(text.strip() if text else "Silence in the cafe.")
             else:
-                texts.append(f"Status {response.status_code}: {response.text[:50]}")
+                # Если опять 410 или 404 — выводим ПОЛНЫЙ текст ошибки от HF
+                error_info = response.json().get("error", response.text)
+                texts.append(f"API Error ({response.status_code}): {error_info[:50]}")
                 
         except Exception as e:
-            texts.append(f"Connection Error: {str(e)[:30]}")
+            texts.append(f"System Error: {str(e)[:30]}")
 
     return {"texts": texts}
