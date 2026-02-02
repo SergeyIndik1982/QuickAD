@@ -16,7 +16,7 @@ app.add_middleware(
 
 HF_TOKEN = os.getenv("HF_TOKEN")
 # Используем GPT-2 как самую быструю
-API_URL = "https://api-inference.huggingface.co/models/gpt2"
+API_URL = "https://api-inference.huggingface.co/models/openai-community/gpt2"
 HEADERS = {"Authorization": f"Bearer {HF_TOKEN}"}
 
 class GenerateRequest(BaseModel):
