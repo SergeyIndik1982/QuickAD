@@ -1,11 +1,11 @@
-import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
-from transformers import pipeline, set_seed
+from transformers import pipeline
 
 # --------------------
-# CONFIG
+# INIT APP
 # --------------------
 app = FastAPI()
 
@@ -16,9 +16,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize Hugging Face generator
-generator = pipeline("text-generation", model="distilgpt2")
-set_seed(42)  # For reproducible results
+# --------------------
+# INIT FREE MODEL
+# --------------------
+text_generator = pipeline("text-generation", model="distilgpt2")
 
 # --------------------
 # SCHEMA
@@ -66,18 +67,30 @@ Occasion: {occasion}
 # --------------------
 # ROUTES
 # --------------------
-@app.get("/")
-def root():
-    return {"status": "QuickAD alive"}
+@app.get("/", response_class=HTMLResponse)
+def index():
+    with open("static/index.html", "r", encoding="utf-8") as f:
+        return f.read()
 
 @app.post("/generate")
 def generate(data: GenerateRequest):
     prompt = build_prompt(data.speaker, data.mood, data.occasion)
     texts = []
-    
+
     for _ in range(data.variants):
-        result = generator(prompt, max_length=50, num_return_sequences=1)
-        text = result[0]['generated_text'].replace(prompt, '').strip()
-        texts.append(text)
-    
+        try:
+            output = text_generator(
+                prompt,
+                max_length=100,
+                do_sample=True,
+                temperature=0.8,
+                top_p=0.9,
+            )
+            text = output[0]["generated_text"].replace(prompt, "").strip()
+            # Разделяем на 2-4 строчки, как в оригинальном промте
+            text_lines = text.split("\n")
+            texts.append("\n".join(text_lines[:4]))
+        except Exception as e:
+            texts.append("Something went wrong.")
+
     return {"texts": texts}
