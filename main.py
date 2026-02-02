@@ -5,9 +5,6 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from huggingface_hub import InferenceClient
 
-# --------------------
-# INIT APP
-# --------------------
 app = FastAPI()
 
 app.add_middleware(
@@ -17,14 +14,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Используем API вместо локальной модели
-# Если хочешь результат покачественнее, замени "distilgpt2" на "mistralai/Mistral-7B-v0.1"
+# Берем токен из переменных Railway
 HF_TOKEN = os.getenv("HF_TOKEN")
-client = InferenceClient("distilgpt2", token=HF_TOKEN)
+# Если токена нет, клиент будет работать в анонимном режиме (очень медленно и с ошибками)
+client = InferenceClient(token=HF_TOKEN)
 
-# --------------------
-# SCHEMA & HELPERS (оставляем как было)
-# --------------------
 class GenerateRequest(BaseModel):
     speaker: str
     mood: str
@@ -32,48 +26,38 @@ class GenerateRequest(BaseModel):
     variants: int = 3
 
 def build_prompt(speaker, mood, occasion):
-    # Добавим явный маркер конца для API
-    return f"""Context:
-Speaker: {speaker}
-Mood: {mood}
-Occasion: {occasion}
+    return f"Cafe observation. Speaker: {speaker}, Mood: {mood}, Context: {occasion}. Short thought:"
 
-Task: Write a short, casual, slightly ironic observation about a cafe. 
-No marketing, no emojis, no exclamation marks.
-Note:"""
-
-# --------------------
-# ROUTES
-# --------------------
 @app.get("/", response_class=HTMLResponse)
 def index():
     try:
         with open("static/index.html", "r", encoding="utf-8") as f:
             return f.read()
-    except FileNotFoundError:
-        return "Static file not found. Check folder structure."
+    except Exception:
+        return "File static/index.html not found."
 
 @app.post("/generate")
 async def generate(data: GenerateRequest):
     prompt = build_prompt(data.speaker, data.mood, data.occasion)
     texts = []
-    
-    # gpt2 — самая быстрая и безотказная для тестов
-    model_id = "gpt2" 
 
     for _ in range(data.variants):
         try:
-            # Убрали wait_for_model, так как он вызвал ошибку
+            # Используем gpt2 как самую стабильную для проверки
             response = client.text_generation(
                 prompt,
-                model=model_id,
-                max_new_tokens=50,
+                model="gpt2",
+                max_new_tokens=40,
                 do_sample=True,
-                temperature=0.8,
+                temperature=0.7
             )
-            texts.append(response.strip())
+            # Убираем промпт из ответа, если он там есть
+            result = response.replace(prompt, "").strip()
+            texts.append(result if result else "The barista just nodded.")
         except Exception as e:
-            print(f"CRITICAL ERROR: {str(e)}")
-            texts.append("The barista is cleaning the counter. Try again.")
+            error_msg = str(e)
+            print(f"DEBUG: {error_msg}")
+            # Если видим 401 — проблема в токене. Если 429 — лимиты.
+            texts.append(f"Status: {error_msg[:50]}...") 
 
     return {"texts": texts}
