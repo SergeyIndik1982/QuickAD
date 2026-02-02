@@ -14,10 +14,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-HF_TOKEN = os.getenv("HF_TOKEN")
-# Используем GPT-2 как самую быструю
-API_URL = "https://api-inference.huggingface.co/models/meta-llama/Llama-3.2-1B-Instruct"
-HEADERS = {"Authorization": f"Bearer {HF_TOKEN}"}
+# Используем Groq API
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+URL = "https://api.groq.com/openai/v1/chat/completions"
 
 class GenerateRequest(BaseModel):
     speaker: str
@@ -32,44 +31,37 @@ def index():
 
 @app.post("/generate")
 async def generate(data: GenerateRequest):
-    # Промпт для новой Llama 3.2
-    prompt = f"User: Write a short, casual, ironic cafe observation from a {data.speaker} in a {data.mood} mood. No emojis. One sentence.\nAssistant:"
-    
-    token = os.getenv("HF_TOKEN")
+    texts = []
     headers = {
-        "Authorization": f"Bearer {token}",
+        "Authorization": f"Bearer {GROQ_API_KEY}",
         "Content-Type": "application/json"
     }
 
-    texts = []
+    # Промпт для качественной модели Llama-3
+    prompt = f"Context: Cafe. Speaker: {data.speaker}. Mood: {data.mood}. Occasion: {data.occasion}. Write one short, casual, ironic observation. No hashtags, no emojis, no marketing."
+
     for _ in range(data.variants):
         try:
-            # Hugging Face теперь требует передавать параметры внутри 'parameters'
             payload = {
-                "inputs": prompt,
-                "parameters": {
-                    "max_new_tokens": 50,
-                    "temperature": 0.7,
-                    "return_full_text": False
-                },
-                "options": {
-                    "wait_for_model": True # Теперь это передается в 'options'
-                }
+                "model": "llama-3.3-70b-versatile", # Мощная и быстрая модель
+                "messages": [
+                    {"role": "system", "content": "You are a witty person writing short cafe notes."},
+                    {"role": "user", "content": prompt}
+                ],
+                "temperature": 0.8,
+                "max_tokens": 60
             }
 
-            response = requests.post(API_URL, headers=headers, json=payload, timeout=30)
+            response = requests.post(URL, headers=headers, json=payload, timeout=10)
             
             if response.status_code == 200:
                 result = response.json()
-                # Обработка ответа (может быть списком или словарем)
-                text = result[0].get("generated_text", "") if isinstance(result, list) else result.get("generated_text", "")
-                texts.append(text.strip() if text else "Silence in the cafe.")
+                text = result['choices'][0]['message']['content'].strip()
+                texts.append(text)
             else:
-                # Если опять 410 или 404 — выводим ПОЛНЫЙ текст ошибки от HF
-                error_info = response.json().get("error", response.text)
-                texts.append(f"API Error ({response.status_code}): {error_info[:50]}")
+                texts.append(f"Groq Error {response.status_code}: {response.text[:50]}")
                 
         except Exception as e:
-            texts.append(f"System Error: {str(e)[:30]}")
+            texts.append(f"Connection Error: {str(e)[:30]}")
 
     return {"texts": texts}
