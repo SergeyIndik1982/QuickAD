@@ -32,31 +32,34 @@ def index():
 
 @app.post("/generate")
 async def generate(data: GenerateRequest):
-    prompt = f"Note: {data.speaker} is feeling {data.mood} because of {data.occasion}. Observation:"
+    prompt = f"Note: {data.speaker}. Mood: {data.mood}. Thought:"
     texts = []
 
     for _ in range(data.variants):
         try:
-            # Прямой POST запрос к API
+            # 1. Проверяем токен прямо перед отправкой
+            token = os.getenv("HF_TOKEN")
+            if not token:
+                texts.append("Error: HF_TOKEN variable is missing in Railway!")
+                continue
+
             response = requests.post(
                 API_URL, 
-                headers=HEADERS, 
-                json={"inputs": prompt, "parameters": {"max_new_tokens": 30, "do_sample": True}},
-                timeout=10
+                headers={"Authorization": f"Bearer {token.strip()}"}, # Чистим от пробелов
+                json={"inputs": prompt, "parameters": {"max_new_tokens": 30}},
+                timeout=15
             )
             
-            result = response.json()
-            
-            # Обработка разных ответов API
-            if isinstance(result, list) and "generated_text" in result[0]:
+            # 2. Логируем статус
+            if response.status_code == 200:
+                result = response.json()
                 gen_text = result[0]["generated_text"].replace(prompt, "").strip()
-                texts.append(gen_text if gen_text else "A quiet moment in the cafe.")
-            elif "error" in result:
-                texts.append(f"API Error: {result['error'][:40]}")
+                texts.append(gen_text if gen_text else "The cafe is empty.")
             else:
-                texts.append("The barista is silent.")
+                # ВЫВОДИМ КОД ОШИБКИ (401, 404, 503)
+                texts.append(f"Server Error Code: {response.status_code}")
                 
         except Exception as e:
-            texts.append(f"Connection error: {str(e)[:30]}")
+            texts.append(f"Local Error: {str(e)[:30]}")
 
     return {"texts": texts}
