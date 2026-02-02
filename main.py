@@ -48,7 +48,7 @@ async def generate(data: GenerateRequest):
                     {"role": "system", "content": "You are a witty person writing short cafe notes."},
                     {"role": "user", "content": prompt}
                 ],
-                "temperature": 0.8,
+                "temperature": 1.1,
                 "max_tokens": 60
             }
 
