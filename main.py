@@ -1,9 +1,9 @@
 import os
+import requests
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
-from huggingface_hub import InferenceClient
 
 app = FastAPI()
 
@@ -14,10 +14,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Берем токен из переменных Railway
 HF_TOKEN = os.getenv("HF_TOKEN")
-# Если токена нет, клиент будет работать в анонимном режиме (очень медленно и с ошибками)
-client = InferenceClient(token=HF_TOKEN)
+# Используем GPT-2 как самую быструю
+API_URL = "https://api-inference.huggingface.co/models/gpt2"
+HEADERS = {"Authorization": f"Bearer {HF_TOKEN}"}
 
 class GenerateRequest(BaseModel):
     speaker: str
@@ -25,39 +25,38 @@ class GenerateRequest(BaseModel):
     occasion: str
     variants: int = 3
 
-def build_prompt(speaker, mood, occasion):
-    return f"Cafe observation. Speaker: {speaker}, Mood: {mood}, Context: {occasion}. Short thought:"
-
 @app.get("/", response_class=HTMLResponse)
 def index():
-    try:
-        with open("static/index.html", "r", encoding="utf-8") as f:
-            return f.read()
-    except Exception:
-        return "File static/index.html not found."
+    with open("static/index.html", "r", encoding="utf-8") as f:
+        return f.read()
 
 @app.post("/generate")
 async def generate(data: GenerateRequest):
-    prompt = build_prompt(data.speaker, data.mood, data.occasion)
+    prompt = f"Note: {data.speaker} is feeling {data.mood} because of {data.occasion}. Observation:"
     texts = []
 
     for _ in range(data.variants):
         try:
-            # Используем gpt2 как самую стабильную для проверки
-            response = client.text_generation(
-                prompt,
-                model="gpt2",
-                max_new_tokens=40,
-                do_sample=True,
-                temperature=0.7
+            # Прямой POST запрос к API
+            response = requests.post(
+                API_URL, 
+                headers=HEADERS, 
+                json={"inputs": prompt, "parameters": {"max_new_tokens": 30, "do_sample": True}},
+                timeout=10
             )
-            # Убираем промпт из ответа, если он там есть
-            result = response.replace(prompt, "").strip()
-            texts.append(result if result else "The barista just nodded.")
+            
+            result = response.json()
+            
+            # Обработка разных ответов API
+            if isinstance(result, list) and "generated_text" in result[0]:
+                gen_text = result[0]["generated_text"].replace(prompt, "").strip()
+                texts.append(gen_text if gen_text else "A quiet moment in the cafe.")
+            elif "error" in result:
+                texts.append(f"API Error: {result['error'][:40]}")
+            else:
+                texts.append("The barista is silent.")
+                
         except Exception as e:
-            error_msg = str(e)
-            print(f"DEBUG: {error_msg}")
-            # Если видим 401 — проблема в токене. Если 429 — лимиты.
-            texts.append(f"Status: {error_msg[:50]}...") 
+            texts.append(f"Connection error: {str(e)[:30]}")
 
     return {"texts": texts}
