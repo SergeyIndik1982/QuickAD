@@ -16,7 +16,7 @@ app.add_middleware(
 
 HF_TOKEN = os.getenv("HF_TOKEN")
 # Используем GPT-2 как самую быструю
-API_URL = "https://api-inference.huggingface.co/models/openai-community/gpt2"
+API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3"
 HEADERS = {"Authorization": f"Bearer {HF_TOKEN}"}
 
 class GenerateRequest(BaseModel):
@@ -32,32 +32,40 @@ def index():
 
 @app.post("/generate")
 async def generate(data: GenerateRequest):
-    prompt = f"Note: {data.speaker}. Mood: {data.mood}. Thought:"
+    prompt = f"Context: Cafe. Speaker: {data.speaker}. Mood: {data.mood}. Write one short, casual sentence of observation:"
     texts = []
+    
+    token = os.getenv("HF_TOKEN")
+    headers = {"Authorization": f"Bearer {token}"}
 
     for _ in range(data.variants):
         try:
-            # 1. Проверяем токен прямо перед отправкой
-            token = os.getenv("HF_TOKEN")
-            if not token:
-                texts.append("Error: HF_TOKEN variable is missing in Railway!")
-                continue
-
             response = requests.post(
                 API_URL, 
-                headers={"Authorization": f"Bearer {token.strip()}"}, # Чистим от пробелов
-                json={"inputs": prompt, "parameters": {"max_new_tokens": 30}},
-                timeout=15
+                headers=headers, 
+                json={
+                    "inputs": prompt, 
+                    "parameters": {"max_new_tokens": 50, "return_full_text": False}
+                },
+                timeout=20
             )
             
-            # 2. Логируем статус
             if response.status_code == 200:
                 result = response.json()
-                gen_text = result[0]["generated_text"].replace(prompt, "").strip()
-                texts.append(gen_text if gen_text else "The cafe is empty.")
+                # Обработка ответа от Mistral
+                if isinstance(result, list):
+                    text = result[0].get("generated_text", "").strip()
+                else:
+                    text = result.get("generated_text", "").strip()
+                texts.append(text if text else "The cup is empty.")
+            
+            elif response.status_code == 503:
+                # Это ХОРОШИЙ знак, значит модель просто грузится
+                texts.append("Barista is waking up... Click again in 15 seconds.")
+            
             else:
-                # ВЫВОДИМ КОД ОШИБКИ (401, 404, 503)
-                texts.append(f"Server Error Code: {response.status_code}")
+                # Если опять будет ошибка, мы увидим её ПОЛНОСТЬЮ
+                texts.append(f"Status {response.status_code}: {response.json().get('error', 'Unknown error')}")
                 
         except Exception as e:
             texts.append(f"Local Error: {str(e)[:30]}")
