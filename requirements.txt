@@ -1,5 +1,4 @@
 fastapi
-uvicorn[standard]
-transformers
-torch
-
+uvicorn
+huggingface_hub
+python-multipart
