@@ -1,22 +1,16 @@
 import os
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 import openai
 
 # --------------------
 # CONFIG
 # --------------------
-openai.api_key = os.getenv("OPENAI_API_KEY")  # Railway environment variable
+# Make sure your OpenAI key is set as an environment variable in Railway
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # --------------------
 # SCHEMA
@@ -30,53 +24,73 @@ class GenerateRequest(BaseModel):
 # --------------------
 # HELPERS
 # --------------------
-def build_prompt(speaker, mood, occasion, variants):
-    return f"""
-Generate {variants} short unfinished texts.
+SYSTEM_PROMPT = """
+You are a real person connected to a cafe.
+You are NOT a marketer and NOT writing ads.
 
-Context:
-Speaker: {speaker}
-Mood: {mood}
-Occasion: {occasion}
+Write short, casual observations.
+They may feel unfinished.
 
 Rules:
 - calm
 - simple
 - slightly ironic at times
 - never promotional
-- 2–4 lines each
-- unfinished
-- separate each text by ---
+
 Forbidden:
 - calls to action
 - exclamation marks
 - emojis
 - marketing language
 - positive conclusions
-Do not explain. Do not conclude. If unsure, write less.
+
+Do not explain.
+Do not conclude.
+If unsure, write less.
+"""
+
+def build_user_prompt(speaker, mood, occasion, variants):
+    return f"""
+Who is speaking: {speaker}
+Mood: {mood}
+Occasion: {occasion}
+
+Generate {variants} short texts.
+Each text:
+- 2–4 lines
+- separated by ---
+- unfinished
 """
 
 # --------------------
 # ROUTES
 # --------------------
-@app.get("/")
-def root():
+@app.get("/", response_class=HTMLResponse)
+def index():
     with open("static/index.html", "r", encoding="utf-8") as f:
         return f.read()
 
 @app.post("/generate")
 def generate(data: GenerateRequest):
-    prompt = build_prompt(data.speaker, data.mood, data.occasion, data.variants)
     try:
+        prompt = SYSTEM_PROMPT + build_user_prompt(
+            data.speaker, data.mood, data.occasion, data.variants
+        )
+
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": prompt}],
+            messages=[{"role": "system", "content": SYSTEM_PROMPT},
+                      {"role": "user", "content": build_user_prompt(
+                          data.speaker, data.mood, data.occasion, data.variants
+                      )}],
             temperature=0.8,
             max_tokens=300
         )
-        text = response.choices[0].message.content
-        texts = [t.strip() for t in text.split("---") if t.strip()]
+
+        raw_text = response.choices[0].message.content
+        texts = [t.strip() for t in raw_text.split("---") if t.strip()]
+
     except Exception as e:
-        print(e)
-        texts = ["Something went wrong."]
+        texts = [f"Something went wrong: {e}"]
+
     return {"texts": texts}
