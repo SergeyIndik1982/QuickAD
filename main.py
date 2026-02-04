@@ -58,6 +58,7 @@ async def create_checkout_session():
         return {"error": str(e)}
 
 # --- ТВОЯ ГЕНЕРАЦИЯ ---
+# --- ТВОЯ ГЕНЕРАЦИЯ ---
 @app.post("/generate")
 async def generate(data: GenerateRequest):
     texts = []
@@ -66,27 +67,75 @@ async def generate(data: GenerateRequest):
         "Content-Type": "application/json"
     }
 
-    prompt = f"Context: Cafe. Speaker: {data.speaker}. Mood: {data.mood}. Occasion: {data.occasion}. Write one short, casual, ironic observation. No hashtags, no emojis, no marketing."
+    system_prompt = """
+Ты — профессиональный креативный копирайтер и сторителлер,
+который много лет пишет живые тексты для кафе и кофеен.
 
-    for _ in range(data.variants):
+Ты создаёшь тексты, которые выглядят как написанные человеком,
+а не ИИ.
+
+Жёсткие правила:
+- никакой прямой рекламы
+- никаких шаблонов и маркетинговых клише
+- естественный, разговорный язык
+- возможна лёгкая неидеальность и смена ритма
+- каждый текст должен отличаться по структуре и подаче
+
+Запрещено использовать:
+«уютная атмосфера», «идеальное место», «ждём вас», «приглашаем»
+списки преимуществ и объяснения.
+"""
+
+    opening_styles = [
+        "начни с вопроса",
+        "начни с короткой мысли или внутреннего комментария",
+        "начни с образа или ощущения",
+        "начни с наблюдения за людьми или моментом",
+        "начни с фразы с середины мысли"
+    ]
+
+    for i in range(data.variants):
+        previous_texts = "\n".join(texts) if texts else "—"
+
+        user_prompt = f"""
+Контекст: кафе.
+От чьего лица: {data.speaker}.
+Настроение: {data.mood}.
+Повод / ситуация: {data.occasion}.
+
+Стиль начала: {opening_styles[i % len(opening_styles)]}.
+
+Ранее сгенерированные тексты:
+{previous_texts}
+
+Требования:
+- новый текст НЕ должен повторять лексику, образы или структуру предыдущих
+- другая подача и другой ритм
+- 1–3 коротких абзаца или одна ёмкая мысль
+- без хэштегов, без эмодзи, без объяснений
+"""
+
         try:
             payload = {
                 "model": "llama-3.3-70b-versatile",
                 "messages": [
-                    {"role": "system", "content": "You are a witty person writing short cafe notes."},
-                    {"role": "user", "content": prompt}
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
                 ],
-                "temperature": 1.1,
-                "max_tokens": 60
+                "temperature": 1.2,
+                "max_tokens": 100
             }
+
             response = requests.post(URL, headers=headers, json=payload, timeout=10)
+
             if response.status_code == 200:
                 result = response.json()
                 text = result['choices'][0]['message']['content'].strip()
                 texts.append(text)
             else:
                 texts.append(f"Groq Error {response.status_code}")
-        except Exception as e:
+
+        except Exception:
             texts.append("Connection Error")
 
     return {"texts": texts}
