@@ -84,7 +84,7 @@ Write only the caption text.
             {"role": "user", "content": prompt}
         ],
         "temperature": 1.1,
-        "max_tokens": 100
+        "max_tokens": 80
     }
 
     try:
