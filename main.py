@@ -73,7 +73,7 @@ Keep it real.
 
 Situation: {data.situation}
 
-Length: 2–5 short paragraphs.
+Length: 2–4 short paragraphs.
 
 Write only the caption text.
 """
@@ -84,7 +84,7 @@ Write only the caption text.
             {"role": "user", "content": prompt}
         ],
         "temperature": 1.1,
-        "max_tokens": 180
+        "max_tokens": 100
     }
 
     try:
