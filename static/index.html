@@ -1,226 +1,85 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>QuickAD | Cafe Thoughts</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <title>Cafe Caption</title>
+    <meta charset="UTF-8" />
     <style>
-        :root {
-            --bg: #0f172a;
-            --card-bg: rgba(255, 255, 255, 0.05);
-            --accent: #38bdf8;
-            --pay-btn: #6366f1;
-            --text: #f1f5f9;
-        }
-
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-
         body {
-            font-family: 'Inter', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #ffffff;
             display: flex;
             flex-direction: column;
             align-items: center;
-            min-height: 100vh;
-            padding: 20px;
+            padding-top: 80px;
         }
 
-        .app-container {
-            width: 100%;
-            max-width: 500px;
-            display: flex;
-            flex-direction: column;
-            gap: 25px;
+        h1 {
+            font-weight: 500;
         }
 
-        header { text-align: center; margin-bottom: 10px; }
-        header h1 { font-weight: 600; font-size: 2rem; margin: 0; color: var(--accent); }
-        header p { opacity: 0.6; font-size: 0.9rem; }
-
-        .controls {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            background: var(--card-bg);
-            padding: 20px;
-            border-radius: 24px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-        }
-
-        label { font-size: 0.8rem; font-weight: 600; opacity: 0.7; margin-left: 5px; }
-
-        select {
-            background: #1e293b;
-            border: 1px solid #334155;
-            color: white;
-            padding: 12px;
-            border-radius: 12px;
+        select, button {
+            padding: 10px;
+            margin-top: 20px;
             font-size: 16px;
-            outline: none;
-            appearance: none;
         }
 
         button {
-            border: none;
-            padding: 16px;
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 1rem;
-            margin-top: 5px;
             cursor: pointer;
-            transition: 0.2s;
         }
 
-        #writeBtn { background: var(--accent); color: #000; }
-        #payBtn { background: var(--pay-btn); color: #fff; margin-top: 15px; }
-
-        button:active { transform: scale(0.98); }
-        button:disabled { opacity: 0.5; }
-
-        .status-msg {
-            padding: 15px;
-            border-radius: 12px;
-            text-align: center;
-            font-size: 0.9rem;
-            display: none;
+        #result {
+            margin-top: 40px;
+            max-width: 500px;
+            white-space: pre-wrap;
         }
 
-        #results { display: flex; flex-direction: column; gap: 15px; }
-
-        .thought-card {
-            background: var(--card-bg);
-            padding: 20px;
-            border-radius: 18px;
-            border-left: 4px solid var(--accent);
-            animation: slideUp 0.4s ease-out;
-            line-height: 1.5;
+        .actions {
+            margin-top: 10px;
         }
-
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .loader { display: none; text-align: center; margin: 20px 0; opacity: 0.8; }
     </style>
 </head>
 <body>
 
-<div class="app-container">
-    <header>
-        <h1>QuickAD</h1>
-        <p>Digital Cafe Observer</p>
-    </header>
+<h1>Cafe Caption</h1>
 
-    <div id="statusBox" class="status-msg"></div>
+<select id="situation">
+    <option value="Morning opening">Morning opening</option>
+    <option value="Slow afternoon">Slow afternoon</option>
+    <option value="Busy weekend">Busy weekend</option>
+    <option value="Rainy day">Rainy day</option>
+    <option value="Just a normal day">Just a normal day</option>
+</select>
 
-    <div class="controls">
-        <label>WHO ARE YOU?</label>
-        <select id="speaker">
-            <option value="Tired Barista">Tired Barista</option>
-            <option value="Snooty Regular">Snooty Regular</option>
-            <option value="Coffee Machine">Coffee Machine</option>
-        </select>
+<button onclick="generate()">Generate</button>
 
-        <label>MOOD</label>
-        <select id="mood">
-            <option value="Sarcastic">Sarcastic</option>
-            <option value="Poetic">Poetic</option>
-            <option value="Existential">Existential</option>
-        </select>
+<div id="result"></div>
 
-        <label>SCENE</label>
-        <select id="occasion">
-            <option value="Morning rush">Morning Rush</option>
-            <option value="Empty cafe">Empty Cafe</option>
-        </select>
-
-        <button id="writeBtn" onclick="generate()">Brew Thoughts</button>
-        
-        <div style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 10px; padding-top: 10px;">
-            <label>OUT OF CREDITS?</label>
-            <button id="payBtn" onclick="buyCredits()">Get 50 Credits — $5</button>
-        </div>
-    </div>
-
-    <div id="loader" class="loader">Grinding coffee beans...</div>
-    <div id="results"></div>
+<div class="actions" id="actions" style="display:none;">
+    <button onclick="copyText()">Copy</button>
+    <button onclick="generate()">Regenerate</button>
 </div>
 
 <script>
-    // Проверка статуса оплаты при загрузке
-    window.onload = () => {
-        const params = new URLSearchParams(window.location.search);
-        const statusBox = document.getElementById('statusBox');
-        if (params.get('success')) {
-            statusBox.innerText = "🎉 Payment successful! Credits added.";
-            statusBox.style.display = "block";
-            statusBox.style.background = "rgba(34, 197, 94, 0.2)";
-        }
-    };
+async function generate() {
+    const situation = document.getElementById("situation").value;
 
-    async function buyCredits() {
-        const btn = document.getElementById('payBtn');
-        btn.disabled = true;
-        btn.innerText = 'Redirecting to Stripe...';
+    const response = await fetch("/generate", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ situation })
+    });
 
-        try {
-            const response = await fetch('/create-checkout-session', { method: 'POST' });
-            const data = await response.json();
-            if (data.url) {
-                window.location.href = data.url;
-            } else {
-                alert("Stripe error: " + data.error);
-            }
-        } catch (e) {
-            alert("Connection error");
-        } finally {
-            btn.disabled = false;
-            btn.innerText = 'Get 50 Credits — $5';
-        }
-    }
+    const data = await response.json();
+    document.getElementById("result").innerText = data.text;
+    document.getElementById("actions").style.display = "block";
+}
 
-    async function generate() {
-        const btn = document.getElementById('writeBtn');
-        const loader = document.getElementById('loader');
-        const results = document.getElementById('results');
-        
-        const payload = {
-            speaker: document.getElementById('speaker').value,
-            mood: document.getElementById('mood').value,
-            occasion: document.getElementById('occasion').value,
-            variants: 3
-        };
-
-        btn.disabled = true;
-        loader.style.display = 'block';
-        results.innerHTML = '';
-
-        try {
-            const response = await fetch('/generate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            const data = await response.json();
-            data.texts.forEach(text => {
-                const card = document.createElement('div');
-                card.className = 'thought-card';
-                card.innerText = text;
-                results.appendChild(card);
-            });
-        } catch (error) {
-            results.innerHTML = `<div class="thought-card">Error contacting the barista...</div>`;
-        } finally {
-            btn.disabled = false;
-            loader.style.display = 'none';
-        }
-    }
+function copyText() {
+    const text = document.getElementById("result").innerText;
+    navigator.clipboard.writeText(text);
+}
 </script>
 
 </body>
 </html>
+
