@@ -1,11 +1,15 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cafe Caption</title>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             margin: 0;
             padding: 24px;
@@ -14,21 +18,23 @@
             display: flex;
             flex-direction: column;
             min-height: 100vh;
+            color: #111;
         }
 
         h1 {
             font-size: 22px;
             font-weight: 500;
-            margin-bottom: 30px;
+            margin-bottom: 28px;
         }
 
         select {
             width: 100%;
             padding: 14px;
             font-size: 16px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
+            border: 1px solid #e5e5e5;
+            border-radius: 10px;
             background: white;
+            appearance: none;
         }
 
         button {
@@ -36,16 +42,28 @@
             padding: 14px;
             margin-top: 16px;
             font-size: 16px;
-            border-radius: 8px;
+            border-radius: 10px;
             border: none;
             background: black;
             color: white;
             cursor: pointer;
+            transition: opacity 0.2s ease;
+        }
+
+        button:active {
+            opacity: 0.8;
         }
 
         button.secondary {
             background: #f2f2f2;
             color: black;
+        }
+
+        #loader {
+            margin-top: 20px;
+            font-size: 14px;
+            opacity: 0.6;
+            display: none;
         }
 
         #result {
@@ -56,66 +74,78 @@
         }
 
         .actions {
-            margin-top: 20px;
+            margin-top: 24px;
             display: none;
             gap: 12px;
+            flex-direction: column;
         }
 
-        .actions button {
-            width: 100%;
-        }
-
-        .loader {
-            margin-top: 20px;
-            font-size: 14px;
-            opacity: 0.6;
-            display: none;
+        footer {
+            margin-top: auto;
+            padding-top: 40px;
+            font-size: 12px;
+            opacity: 0.4;
+            text-align: center;
         }
     </style>
 </head>
 
 <body>
 
-<h1>Cafe Caption</h1>
+    <h1>Cafe Caption</h1>
 
-<select id="situation">
-    <option value="Morning opening">Morning opening</option>
-    <option value="Slow afternoon">Slow afternoon</option>
-    <option value="Busy weekend">Busy weekend</option>
-    <option value="Rainy day">Rainy day</option>
-    <option value="Just a normal day">Just a normal day</option>
-</select>
+    <select id="situation">
+        <option value="Morning opening">Morning opening</option>
+        <option value="Slow afternoon">Slow afternoon</option>
+        <option value="Busy weekend">Busy weekend</option>
+        <option value="Rainy day">Rainy day</option>
+        <option value="Just a normal day">Just a normal day</option>
+    </select>
 
-<button onclick="generate()">Generate</button>
+    <button onclick="generate()">Generate</button>
 
-<div class="loader" id="loader">Generating…</div>
+    <div id="loader">Generating…</div>
 
-<div id="result"></div>
+    <div id="result"></div>
 
-<div class="actions" id="actions">
-    <button class="secondary" onclick="copyText()">Copy</button>
-    <button onclick="generate()">Regenerate</button>
-</div>
+    <div class="actions" id="actions">
+        <button class="secondary" onclick="copyText()">Copy</button>
+        <button onclick="generate()">Regenerate</button>
+    </div>
+
+    <footer>
+        Minimal. Human. Real.
+    </footer>
 
 <script>
 async function generate() {
     const situation = document.getElementById("situation").value;
 
-    document.getElementById("loader").style.display = "block";
-    document.getElementById("result").innerText = "";
-    document.getElementById("actions").style.display = "none";
+    const loader = document.getElementById("loader");
+    const result = document.getElementById("result");
+    const actions = document.getElementById("actions");
 
-    const response = await fetch("/generate", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({ situation })
-    });
+    loader.style.display = "block";
+    result.innerText = "";
+    actions.style.display = "none";
 
-    const data = await response.json();
+    try {
+        const response = await fetch("/generate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ situation })
+        });
 
-    document.getElementById("loader").style.display = "none";
-    document.getElementById("result").innerText = data.text;
-    document.getElementById("actions").style.display = "flex";
+        const data = await response.json();
+
+        loader.style.display = "none";
+        result.innerText = data.text;
+        actions.style.display = "flex";
+
+    } catch (error) {
+        loader.style.display = "none";
+        result.innerText = "Connection error.";
+    }
 }
 
 function copyText() {
