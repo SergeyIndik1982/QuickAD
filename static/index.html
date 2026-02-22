@@ -3,41 +3,77 @@
 <head>
     <title>Cafe Caption</title>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
     <style>
         body {
-            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 24px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background: #ffffff;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            padding-top: 80px;
+            min-height: 100vh;
         }
 
         h1 {
+            font-size: 22px;
             font-weight: 500;
+            margin-bottom: 30px;
         }
 
-        select, button {
-            padding: 10px;
-            margin-top: 20px;
+        select {
+            width: 100%;
+            padding: 14px;
             font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: white;
         }
 
         button {
+            width: 100%;
+            padding: 14px;
+            margin-top: 16px;
+            font-size: 16px;
+            border-radius: 8px;
+            border: none;
+            background: black;
+            color: white;
             cursor: pointer;
+        }
+
+        button.secondary {
+            background: #f2f2f2;
+            color: black;
         }
 
         #result {
             margin-top: 40px;
-            max-width: 500px;
+            font-size: 16px;
+            line-height: 1.6;
             white-space: pre-wrap;
         }
 
         .actions {
-            margin-top: 10px;
+            margin-top: 20px;
+            display: none;
+            gap: 12px;
+        }
+
+        .actions button {
+            width: 100%;
+        }
+
+        .loader {
+            margin-top: 20px;
+            font-size: 14px;
+            opacity: 0.6;
+            display: none;
         }
     </style>
 </head>
+
 <body>
 
 <h1>Cafe Caption</h1>
@@ -52,16 +88,22 @@
 
 <button onclick="generate()">Generate</button>
 
+<div class="loader" id="loader">Generating…</div>
+
 <div id="result"></div>
 
-<div class="actions" id="actions" style="display:none;">
-    <button onclick="copyText()">Copy</button>
+<div class="actions" id="actions">
+    <button class="secondary" onclick="copyText()">Copy</button>
     <button onclick="generate()">Regenerate</button>
 </div>
 
 <script>
 async function generate() {
     const situation = document.getElementById("situation").value;
+
+    document.getElementById("loader").style.display = "block";
+    document.getElementById("result").innerText = "";
+    document.getElementById("actions").style.display = "none";
 
     const response = await fetch("/generate", {
         method: "POST",
@@ -70,8 +112,10 @@ async function generate() {
     });
 
     const data = await response.json();
+
+    document.getElementById("loader").style.display = "none";
     document.getElementById("result").innerText = data.text;
-    document.getElementById("actions").style.display = "block";
+    document.getElementById("actions").style.display = "flex";
 }
 
 function copyText() {
