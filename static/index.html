@@ -1,159 +1,190 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cafe Caption</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cafe Caption</title>
 
-    <style>
-        * {
-            box-sizing: border-box;
-        }
+<style>
+body {
+    margin:0;
+    padding:24px;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:#fff;
+    display:flex;
+    flex-direction:column;
+    height:100vh;
+    transition:filter 0.3s ease;
+}
 
-        body {
-            margin: 0;
-            padding: 24px;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: #ffffff;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-            color: #111;
-        }
+body.blur {
+    filter: blur(4px);
+}
 
-        h1 {
-            font-size: 22px;
-            font-weight: 500;
-            margin-bottom: 28px;
-        }
+h1 {
+    font-size:22px;
+    font-weight:500;
+    margin-bottom:24px;
+}
 
-        select {
-            width: 100%;
-            padding: 14px;
-            font-size: 16px;
-            border: 1px solid #e5e5e5;
-            border-radius: 10px;
-            background: white;
-            appearance: none;
-        }
+select {
+    width:100%;
+    padding:14px;
+    font-size:16px;
+    border:1px solid #ddd;
+    border-radius:12px;
+}
 
-        button {
-            width: 100%;
-            padding: 14px;
-            margin-top: 16px;
-            font-size: 16px;
-            border-radius: 10px;
-            border: none;
-            background: black;
-            color: white;
-            cursor: pointer;
-            transition: opacity 0.2s ease;
-        }
+button {
+    width:100%;
+    padding:14px;
+    margin-top:16px;
+    font-size:16px;
+    border-radius:12px;
+    border:none;
+    background:black;
+    color:white;
+    cursor:pointer;
+}
 
-        button:active {
-            opacity: 0.8;
-        }
+#overlay {
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.2);
+    backdrop-filter: blur(6px);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity 0.3s ease;
+}
 
-        button.secondary {
-            background: #f2f2f2;
-            color: black;
-        }
+#overlay.active {
+    opacity:1;
+    pointer-events:auto;
+}
 
-        #loader {
-            margin-top: 20px;
-            font-size: 14px;
-            opacity: 0.6;
-            display: none;
-        }
+#sheet {
+    position:fixed;
+    left:0;
+    bottom:-100%;
+    width:100%;
+    background:#fff;
+    border-radius:20px 20px 0 0;
+    box-shadow:0 -5px 30px rgba(0,0,0,0.15);
+    padding:24px;
+    transition:bottom 0.35s ease;
+    max-height:80%;
+    overflow:auto;
+    touch-action:none;
+}
 
-        #result {
-            margin-top: 40px;
-            font-size: 16px;
-            line-height: 1.6;
-            white-space: pre-wrap;
-        }
+#sheet.active {
+    bottom:0;
+}
 
-        .actions {
-            margin-top: 24px;
-            display: none;
-            gap: 12px;
-            flex-direction: column;
-        }
+.drag-bar {
+    width:40px;
+    height:4px;
+    background:#ccc;
+    border-radius:2px;
+    margin:0 auto 16px auto;
+}
 
-        footer {
-            margin-top: auto;
-            padding-top: 40px;
-            font-size: 12px;
-            opacity: 0.4;
-            text-align: center;
-        }
-    </style>
+#result {
+    white-space:pre-wrap;
+    line-height:1.6;
+}
+
+.copy-btn {
+    margin-top:20px;
+    background:#f2f2f2;
+    color:black;
+}
+</style>
 </head>
 
 <body>
 
-    <h1>Cafe Caption</h1>
+<h1>Cafe Caption</h1>
 
-    <select id="situation">
-        <option value="Morning opening">Morning opening</option>
-        <option value="Slow afternoon">Slow afternoon</option>
-        <option value="Busy weekend">Busy weekend</option>
-        <option value="Rainy day">Rainy day</option>
-        <option value="Just a normal day">Just a normal day</option>
-    </select>
+<select id="situation">
+    <option value="Morning opening">Morning opening</option>
+    <option value="Slow afternoon">Slow afternoon</option>
+    <option value="Busy weekend">Busy weekend</option>
+    <option value="Rainy day">Rainy day</option>
+    <option value="Just a normal day">Just a normal day</option>
+</select>
 
-    <button onclick="generate()">Generate</button>
+<button onclick="generate()">Generate</button>
 
-    <div id="loader">Generating…</div>
+<div id="overlay" onclick="closeSheet()"></div>
 
+<div id="sheet">
+    <div class="drag-bar"></div>
     <div id="result"></div>
-
-    <div class="actions" id="actions">
-        <button class="secondary" onclick="copyText()">Copy</button>
-        <button onclick="generate()">Regenerate</button>
-    </div>
-
-    <footer>
-        Minimal. Human. Real.
-    </footer>
+    <button class="copy-btn" onclick="copyText()">Copy</button>
+</div>
 
 <script>
+const sheet = document.getElementById("sheet");
+const overlay = document.getElementById("overlay");
+let startY = 0;
+let currentY = 0;
+let isDragging = false;
+
 async function generate() {
     const situation = document.getElementById("situation").value;
 
-    const loader = document.getElementById("loader");
-    const result = document.getElementById("result");
-    const actions = document.getElementById("actions");
+    const response = await fetch("/generate", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ situation })
+    });
 
-    loader.style.display = "block";
-    result.innerText = "";
-    actions.style.display = "none";
+    const data = await response.json();
 
-    try {
-        const response = await fetch("/generate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ situation })
-        });
+    document.getElementById("result").innerText = data.text;
 
-        const data = await response.json();
+    overlay.classList.add("active");
+    sheet.classList.add("active");
+}
 
-        loader.style.display = "none";
-        result.innerText = data.text;
-        actions.style.display = "flex";
-
-    } catch (error) {
-        loader.style.display = "none";
-        result.innerText = "Connection error.";
-    }
+function closeSheet() {
+    sheet.classList.remove("active");
+    overlay.classList.remove("active");
 }
 
 function copyText() {
     const text = document.getElementById("result").innerText;
     navigator.clipboard.writeText(text);
 }
+
+/* Swipe Down */
+
+sheet.addEventListener("touchstart", e => {
+    startY = e.touches[0].clientY;
+    isDragging = true;
+});
+
+sheet.addEventListener("touchmove", e => {
+    if (!isDragging) return;
+    currentY = e.touches[0].clientY;
+    let diff = currentY - startY;
+    if (diff > 0) {
+        sheet.style.transform = `translateY(${diff}px)`;
+    }
+});
+
+sheet.addEventListener("touchend", () => {
+    isDragging = false;
+    let diff = currentY - startY;
+
+    if (diff > 100) {
+        closeSheet();
+    }
+
+    sheet.style.transform = "translateY(0)";
+});
 </script>
 
 </body>
 </html>
-
