@@ -1,234 +1,199 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Cafe Caption</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cafe Caption — AI Generator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg: #F8F5F2;
+            --accent: #A39184;
+            --text: #4A443F;
+            --border: #E8E2DB;
+            --white: #FFFFFF;
+        }
 
-<style>
-    :root {
-        --primary: #000;
-        --secondary: #f2f2f2;
-        --radius: 16px;
-        --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
 
-    body {
-        margin: 0;
-        padding: 24px;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        background: #fff;
-        color: #1a1a1a;
-        -webkit-tap-highlight-color: transparent;
-    }
+        .app-container {
+            width: 100%;
+            max-width: 400px;
+        }
 
-    h1 { font-size: 24px; font-weight: 700; margin-bottom: 24px; letter-spacing: -0.5px; }
+        /* --- ОБНОВЛЕННЫЙ ХЕДЕР --- */
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 25px;
+        }
 
-    label { display: block; margin-bottom: 8px; font-size: 14px; color: #666; font-weight: 500; }
+        .logo-img {
+            height: 40px; /* Оптимальный размер */
+            width: auto;
+            display: block;
+        }
 
-    select {
-        width: 100%;
-        padding: 16px;
-        font-size: 16px;
-        border: 1.5px solid #eee;
-        border-radius: var(--radius);
-        background: #f9f9f9;
-        appearance: none;
-        outline: none;
-        transition: border-color var(--transition);
-    }
+        header h1 {
+            font-family: 'Fraunces', serif;
+            font-weight: 300;
+            font-size: 1.6rem;
+            margin: 0;
+            line-height: 1;
+        }
 
-    select:focus { border-color: var(--primary); }
+        header h1 span {
+            color: var(--accent);
+            font-weight: 600;
+        }
 
-    button {
-        width: 100%;
-        padding: 16px;
-        margin-top: 16px;
-        font-size: 16px;
-        font-weight: 600;
-        border-radius: var(--radius);
-        border: none;
-        background: var(--primary);
-        color: white;
-        cursor: pointer;
-        transition: opacity 0.2s;
-    }
+        /* --- КАРТОЧКА --- */
+        .card {
+            background: var(--white);
+            padding: 24px;
+            border-radius: 24px;
+            box-shadow: 0 10px 30px rgba(163, 145, 132, 0.1);
+            border: 1px solid var(--border);
+        }
 
-    button:active { opacity: 0.8; transform: scale(0.98); }
-    button:disabled { background: #ccc; cursor: not-allowed; }
+        label {
+            display: block;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+            opacity: 0.7;
+        }
 
-    /* Bottom Sheet Styles */
-    #overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.4);
-        backdrop-filter: blur(4px);
-        opacity: 0;
-        visibility: hidden;
-        transition: all var(--transition);
-        z-index: 99;
-    }
+        .segments {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
 
-    #overlay.active { opacity: 1; visibility: visible; }
+        .segment {
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: none;
+            cursor: pointer;
+            font-family: inherit;
+            color: var(--text);
+            transition: all 0.2s;
+        }
 
-    #sheet {
-        position: fixed;
-        left: 0;
-        bottom: -100%;
-        width: 100%;
-        background: #fff;
-        border-radius: 24px 24px 0 0;
-        box-shadow: 0 -10px 40px rgba(0,0,0,0.1);
-        padding: 24px;
-        padding-bottom: env(safe-area-inset-bottom, 24px);
-        transition: bottom var(--transition), transform 0.1s ease-out;
-        z-index: 100;
-        box-sizing: border-box;
-    }
+        .segment.active {
+            background: var(--accent);
+            color: var(--white);
+            border-color: var(--accent);
+        }
 
-    #sheet.active { bottom: 0; }
+        .btn-main {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 16px;
+            background: var(--text);
+            color: var(--white);
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
 
-    .drag-handle {
-        width: 36px;
-        height: 5px;
-        background: #e0e0e0;
-        border-radius: 10px;
-        margin: -8px auto 20px auto;
-    }
+        .btn-main:active { transform: scale(0.98); }
 
-    #result {
-        font-size: 17px;
-        line-height: 1.6;
-        color: #333;
-        min-height: 60px;
-    }
+        .btn-premium {
+            width: 100%;
+            margin-top: 10px;
+            padding: 12px;
+            background: none;
+            border: 1px dashed var(--accent);
+            color: var(--accent);
+            border-radius: 16px;
+            cursor: pointer;
+            font-size: 14px;
+        }
 
-    .copy-btn {
-        background: var(--secondary);
-        color: var(--primary);
-        margin-top: 24px;
-    }
-</style>
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #FDFCFB;
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.6;
+            display: none; /* Скрыт до генерации */
+        }
+    </style>
 </head>
-
 <body>
 
-    <h1>☕️ Cafe Caption</h1>
+<div class="app-container">
+    <header>
+        <img src="logo.png" alt="Logo" class="logo-img">
+        <h1>Cafe <span>Caption</span></h1>
+    </header>
 
-    <label for="situation">Select a vibe</label>
-    <select id="situation">
-        <option value="Morning opening">☀️ Morning opening</option>
-        <option value="Slow afternoon">📖 Slow afternoon</option>
-        <option value="Busy weekend">⚡️ Busy weekend</option>
-        <option value="Rainy day">☔️ Rainy day</option>
-        <option value="Just a normal day">☕️ Just a normal day</option>
-    </select>
+    <div class="card">
+        <label>Mood</label>
+        <div class="segments" id="mood-group">
+            <button class="segment active" onclick="select(this, 'mood')">Cozy</button>
+            <button class="segment" onclick="select(this, 'mood')">Energetic</button>
+        </div>
 
-    <button id="genBtn" onclick="generate()">Generate Caption</button>
+        <label>Goal</label>
+        <div class="segments" id="goal-group">
+            <button class="segment active" onclick="select(this, 'goal')">Menu Info</button>
+            <button class="segment" onclick="select(this, 'goal')">Promo</button>
+        </div>
 
-    <div id="overlay" onclick="closeSheet()"></div>
+        <button class="btn-main" onclick="brew()">Brew Content</button>
+        <button class="btn-premium">✨ Week Plan (Premium)</button>
 
-    <div id="sheet">
-        <div class="drag-handle"></div>
         <div id="result"></div>
-        <button id="copyBtn" class="copy-btn" onclick="copyText()">Copy Caption</button>
     </div>
+</div>
 
 <script>
-const sheet = document.getElementById("sheet");
-const overlay = document.getElementById("overlay");
-const genBtn = document.getElementById("genBtn");
-const copyBtn = document.getElementById("copyBtn");
-const resultDiv = document.getElementById("result");
+    let state = {
+        mood: 'Cozy',
+        goal: 'Menu Info'
+    };
 
-let startY = 0;
-let isDragging = false;
-
-async function generate() {
-    const situation = document.getElementById("situation").value;
-    
-    // UI Feedback: Loading
-    genBtn.disabled = true;
-    genBtn.innerText = "Generating...";
-
-    try {
-        const response = await fetch("/generate", {
-            method: "POST",
-            headers: {"Content-Type":"application/json"},
-            body: JSON.stringify({ situation })
-        });
-
-        if (!response.ok) throw new Error("Server error");
-
-        const data = await response.json();
-        resultDiv.innerText = data.text;
-
-        // Show Sheet
-        overlay.classList.add("active");
-        sheet.classList.add("active");
-    } catch (err) {
-        alert("Failed to generate. Please try again.");
-    } finally {
-        genBtn.disabled = false;
-        genBtn.innerText = "Generate Caption";
+    function select(el, type) {
+        const parent = el.parentElement;
+        parent.querySelectorAll('.segment').forEach(b => b.classList.remove('active'));
+        el.classList.add('active');
+        state[type] = el.innerText;
     }
-}
 
-function closeSheet() {
-    sheet.classList.remove("active");
-    overlay.classList.remove("active");
-    sheet.style.transform = "translateY(0)"; // Reset drag pos
-}
+    async function brew() {
+        const resDiv = document.getElementById('result');
+        resDiv.style.display = 'block';
+        resDiv.innerText = 'Brewing your content...';
 
-async function copyText() {
-    const text = resultDiv.innerText;
-    try {
-        await navigator.clipboard.writeText(text);
-        
-        // UI Feedback: Copied
-        const originalText = copyBtn.innerText;
-        copyBtn.innerText = "✅ Copied!";
-        copyBtn.style.background = "#e8f5e9";
-        
+        // Твоя логика запроса к API Railway/FastAPI
+        // Здесь заглушка для примера:
         setTimeout(() => {
-            copyBtn.innerText = originalText;
-            copyBtn.style.background = "";
-        }, 2000);
-    } catch (err) {
-        console.error("Copy failed");
+            resDiv.innerText = `[${state.mood}] Here is your perfect caption for ${state.goal}! Enjoy your coffee atmosphere.`;
+        }, 1500);
     }
-}
-
-/* Enhanced Swipe Down */
-sheet.addEventListener("touchstart", e => {
-    startY = e.touches[0].clientY;
-    isDragging = true;
-    sheet.style.transition = "none"; // Disable transitions while dragging
-}, {passive: true});
-
-sheet.addEventListener("touchmove", e => {
-    if (!isDragging) return;
-    const currentY = e.touches[0].clientY;
-    const diff = currentY - startY;
-    
-    if (diff > 0) {
-        sheet.style.transform = `translateY(${diff}px)`;
-    }
-}, {passive: true});
-
-sheet.addEventListener("touchend", e => {
-    isDragging = false;
-    sheet.style.transition = "bottom 0.35s ease, transform 0.3s ease";
-    
-    const endY = e.changedTouches[0].clientY;
-    const diff = endY - startY;
-
-    if (diff > 120) {
-        closeSheet();
-    } else {
-        sheet.style.transform = "translateY(0)";
-    }
-});
 </script>
 
 </body>
