@@ -1,200 +1,303 @@
+
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cafe Caption — AI Generator</title>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cafe Caption</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@300;600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --bg: #F8F5F2;
-            --accent: #A39184;
-            --text: #4A443F;
-            --border: #E8E2DB;
-            --white: #FFFFFF;
-        }
+        :root { --bg: #F8F5F2; --accent: #A39184; --text: #4A443F; --border: #E8E2DC; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .app { width: 100%; max-width: 420px; }
+        header h1 { font-family: 'Fraunces', serif; text-align: center; font-weight: 300; font-size: 2.2rem; }
+        header span { color: var(--accent); font-weight: 600; }
+        .card { background: white; padding: 24px; border-radius: 24px; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.02); margin-bottom: 20px; }
+        label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; color: #8C7B6F; display: block; margin-bottom: 10px; }
+        .lang-bar { display: flex; gap: 15px; overflow-x: auto; padding-bottom: 12px; border-bottom: 1px solid #F1EFEF; margin-bottom: 20px; }
+        .lang { font-size: 11px; opacity: 0.4; cursor: pointer; font-weight: 600; }
+        .lang.active { opacity: 1; color: var(--accent); border-bottom: 2px solid var(--accent); }
+        input { width: 100%; padding: 14px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 15px; font-family: inherit; font-size: 14px; box-sizing: border-box; outline: none; }
+        .segments { display: flex; background: #F1EFEF; padding: 4px; border-radius: 12px; margin-bottom: 20px; }
+        .seg { flex: 1; text-align: center; padding: 10px; font-size: 11px; cursor: pointer; border-radius: 10px; color: #8E8883; font-weight: 600; }
+        .seg.active { background: white; color: var(--text); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        button { width: 100%; padding: 18px; border-radius: 35px; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .btn-main { background: var(--accent); color: white; font-size: 17px; }
+        .btn-premium { background: #4A443F; color: white; font-size: 15px; margin-top: 10px; border: 1px solid var(--accent); }
+        .btn-sub { background: none; border: 1px solid var(--border); color: var(--accent); margin-top: 12px; font-size: 11px; text-transform: uppercase; }
+        .sheet { position: fixed; bottom: -100%; left: 0; right: 0; background: #F2F0ED; padding: 35px 20px; border-radius: 30px 30px 0 0; transition: 0.5s; z-index: 1000; max-height: 80vh; overflow-y: auto; }
+        .sheet.active { bottom: 0; }
+        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.25); display: none; z-index: 999; backdrop-filter: blur(4px); }
+        .receipt { background: white; padding: 30px 25px; font-family: 'Courier New', monospace; margin-bottom: 20px; position: relative; white-space: pre-wrap; border-bottom: 2px dashed var(--border); }
+        .photo-tip { margin-top: 15px; font-size: 12px; color: #777; border-top: 1px dashed #eee; padding-top: 10px; font-style: italic; font-family: 'Inter', sans-serif; }
+        .copy-btn { position: absolute; top: 10px; right: 10px; background: #F8F5F2; border: 1px solid #eee; font-size: 9px; padding: 5px; cursor: pointer; }
+.ig-btn { 
+    display: flex; align-items: center; justify-content: center;
+    width: 100%; margin-top: 20px; padding: 12px; 
+    background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+    color: white; text-decoration: none; border-radius: 12px; 
+    font-size: 13px; font-weight: 600; font-family: 'Inter', sans-serif;
+} 
+/* Контейнер для кнопок внизу чека */
+.actions { 
+    display: flex; 
+    gap: 10px; 
+    margin-top: 20px; 
+}
 
-        * { box-sizing: border-box; }
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 20px;
-        }
+/* Общий стиль для новых кнопок действий */
+.action-btn {
+    flex: 1;
+    padding: 14px;
+    border-radius: 14px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    border: none;
+    transition: transform 0.1s ease;
+}
 
-        .app-container {
-            width: 100%;
-            max-width: 400px;
-        }
+.action-btn:active { transform: scale(0.96); }
 
-        /* --- ОБНОВЛЕННЫЙ ХЕДЕР --- */
-        header {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            margin-bottom: 25px;
-        }
+/* Кнопка Копирования */
+.btn-copy {
+    background: #F1EFEF;
+    color: var(--text);
+}
 
-        .logo-img {
-            height: 40px; /* Оптимальный размер */
-            width: auto;
-            display: block;
-        }
+/* Кнопка Инстаграм */
+.btn-instagram {
+    background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+    color: white;
+    text-decoration: none;
+}
 
-        header h1 {
-            font-family: 'Fraunces', serif;
-            font-weight: 300;
-            font-size: 1.6rem;
-            margin: 0;
-            line-height: 1;
-        }
-
-        header h1 span {
-            color: var(--accent);
-            font-weight: 600;
-        }
-
-        /* --- КАРТОЧКА --- */
-        .card {
-            background: var(--white);
-            padding: 24px;
-            border-radius: 24px;
-            box-shadow: 0 10px 30px rgba(163, 145, 132, 0.1);
-            border: 1px solid var(--border);
-        }
-
-        label {
-            display: block;
-            font-size: 12px;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 12px;
-            opacity: 0.7;
-        }
-
-        .segments {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            margin-bottom: 20px;
-        }
-
-        .segment {
-            padding: 12px;
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            background: none;
-            cursor: pointer;
-            font-family: inherit;
-            color: var(--text);
-            transition: all 0.2s;
-        }
-
-        .segment.active {
-            background: var(--accent);
-            color: var(--white);
-            border-color: var(--accent);
-        }
-
-        .btn-main {
-            width: 100%;
-            padding: 16px;
-            border: none;
-            border-radius: 16px;
-            background: var(--text);
-            color: var(--white);
-            font-size: 16px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: transform 0.1s;
-        }
-
-        .btn-main:active { transform: scale(0.98); }
-
-        .btn-premium {
-            width: 100%;
-            margin-top: 10px;
-            padding: 12px;
-            background: none;
-            border: 1px dashed var(--accent);
-            color: var(--accent);
-            border-radius: 16px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-
-        #result {
-            margin-top: 20px;
-            padding: 15px;
-            background: #FDFCFB;
-            border-radius: 12px;
-            font-size: 14px;
-            line-height: 1.6;
-            display: none; /* Скрыт до генерации */
-        }
+/* Скрываем старую версию кнопки copy-btn, если она осталась в HTML */
+.copy-btn { display: none; }
+}    
+        
     </style>
 </head>
 <body>
 
-<div class="app-container">
-    <header>
-        <img src="logo.png" alt="Logo" class="logo-img">
-        <h1>Cafe <span>Caption</span></h1>
-    </header>
-
+<div class="app">
+    <header><h1>Cafe <span>Caption</span></h1></header>
     <div class="card">
+        <label>Email</label>
+        <input type="email" id="email" placeholder="Your email..." oninput="localStorage.setItem('email', this.value)">
+        
+        <label>Language</label>
+        <div class="lang-bar">
+            <div class="lang active" onclick="setL('English', this)">EN</div>
+            <div class="lang" onclick="setL('German', this)">DE</div>
+            <div class="lang" onclick="setL('French', this)">FR</div>
+            <div class="lang" onclick="setL('Italian', this)">IT</div>
+            <div class="lang" onclick="setL('Russian', this)">RU</div>
+        </div>
+
+        <label>Cafe Name</label>
+        <input type="text" id="name" placeholder="Name of your space..." oninput="localStorage.setItem('name', this.value)">
+
         <label>Mood</label>
-        <div class="segments" id="mood-group">
-            <button class="segment active" onclick="select(this, 'mood')">Cozy</button>
-            <button class="segment" onclick="select(this, 'mood')">Energetic</button>
+        <div class="segments">
+            <div class="seg active" onclick="setV('mood','Poetic',this)">Poetic</div>
+            <div class="seg" onclick="setV('mood','Minimal',this)">Minimal</div>
+            <div class="seg" onclick="setV('mood','Witty',this)">Witty</div>
         </div>
 
-        <label>Goal</label>
-        <div class="segments" id="goal-group">
-            <button class="segment active" onclick="select(this, 'goal')">Menu Info</button>
-            <button class="segment" onclick="select(this, 'goal')">Promo</button>
-        </div>
+        <label>Focus</label>
+<div class="segments">
+    <div class="seg active" onclick="setV('goal','Atmosphere',this)">Atmosphere</div>
+    <div class="seg" onclick="setV('goal','Drinks',this)">Drinks</div>
+    <div class="seg" onclick="setV('goal','Food',this)">Food</div>
+    <div class="seg" onclick="setV('goal','People',this)">People</div>
+    <div class="seg" onclick="setV('goal','Daily',this)">Daily</div>
+</div>
 
-        <button class="btn-main" onclick="brew()">Brew Content</button>
-        <button class="btn-premium">✨ Week Plan (Premium)</button>
-
-        <div id="result"></div>
+        <button class="btn-main" id="go" onclick="brew()">Brew Content</button>
+        <button class="btn-premium" id="go-week" onclick="brewWeek()">✨ Week Generator (7 Posts)</button>
+        
     </div>
 </div>
 
+<div class="overlay" id="blur" onclick="toggleAll()"></div>
+<div class="sheet" id="resultSheet"><div id="results"></div></div>
+<div class="sheet" id="priceSheet">
+    <h3 style="text-align:center;">The Coffee Menu</h3>
+    <button class="btn-main" onclick="buy('single')" style="margin-bottom:10px;">$5 - 50 Credits</button>
+    <button class="btn-main" onclick="buy('monthly')">$15/mo - Unlimited</button>
+</div>
+
 <script>
-    let state = {
-        mood: 'Cozy',
-        goal: 'Menu Info'
-    };
+    let state = { lang: 'English', mood: 'Poetic', goal: 'Atmosphere' };
 
-    function select(el, type) {
-        const parent = el.parentElement;
-        parent.querySelectorAll('.segment').forEach(b => b.classList.remove('active'));
-        el.classList.add('active');
-        state[type] = el.innerText;
-    }
+    
+    function openIG() {
+    // Эта схема пытается открыть сразу экран выбора фото в приложении
+    const igLibraryUrl = "instagram://library?AssetPath=null"; 
+    const webUrl = "https://www.instagram.com/";
 
-    async function brew() {
-        const resDiv = document.getElementById('result');
-        resDiv.style.display = 'block';
-        resDiv.innerText = 'Brewing your content...';
-
-        // Твоя логика запроса к API Railway/FastAPI
-        // Здесь заглушка для примера:
+    // Проверка: если мы на мобильном устройстве
+    if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+        window.location.href = igLibraryUrl;
+        
+        // Резервный переход, если приложение не открылось за 700мс
         setTimeout(() => {
-            resDiv.innerText = `[${state.mood}] Here is your perfect caption for ${state.goal}! Enjoy your coffee atmosphere.`;
-        }, 1500);
+            window.open(webUrl, '_blank');
+        }, 700);
+    } else {
+        // Если открыли с ПК — просто открываем сайт
+        window.open(webUrl, '_blank');
     }
-</script>
+    } 
+    function setL(l, el) { 
+        state.lang = l; 
+        document.querySelectorAll('.lang').forEach(x=>x.classList.remove('active')); 
+        el.classList.add('active'); 
+    }
+    
+    function setV(k, v, el) { 
+        state[k] = v; 
+        el.parentElement.querySelectorAll('.seg').forEach(x=>x.classList.remove('active')); 
+        el.classList.add('active'); 
+    }
 
+    function toggle(id, s) { 
+        document.getElementById(id).classList.toggle('active', s); 
+        document.getElementById('blur').style.display = s ? 'block' : 'none'; 
+    }
+
+    function toggleAll() { 
+        document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('active')); 
+        document.getElementById('blur').style.display = 'none'; 
+    }
+
+    // Single Post Generator
+    async function brew() {
+        const email = document.getElementById('email').value;
+        const name = document.getElementById('name').value;
+        if(!email || !name) return alert("Fill Email and Name");
+
+        const btn = document.getElementById('go');
+        btn.innerText = "Steeping..."; btn.disabled = true;
+        
+        try {
+            const res = await fetch('/generate', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({email: email, cafe_name: name, language: state.lang, mood: state.mood, goal: state.goal})
+            });
+            const data = await res.json();
+            if(data.error === "no_credits") return toggle('priceSheet', true);
+            
+            const box = document.getElementById('results');
+            box.innerHTML = '';
+            data.texts.forEach(t => {
+                const parts = t.split('|');
+                const cap = parts[0] ? parts[0].trim() : "";
+                const pic = parts[1] ? parts[1].trim() : "Natural light, focus on texture.";
+                box.innerHTML += `
+    <div class="receipt">
+        <div class="content-to-copy">
+            ${cap}
+        </div>
+        <div class="photo-tip">📸 <strong>PHOTO SCRIPT:</strong><br>${pic}</div>
+        
+        <div class="actions">
+            <button class="action-btn btn-copy" onclick="copy(this.closest('.receipt').querySelector('.content-to-copy').innerText.trim())">
+                📋 COPY
+            </button>
+            <a href="javascript:void(0)" class="action-btn btn-instagram" onclick="openIG()">
+                📸 INSTAGRAM
+            </a>
+        </div>
+    </div>`;
+            });
+            toggle('resultSheet', true);
+        } catch { alert("Error connecting to server"); }
+        finally { btn.innerText = "Brew Content"; btn.disabled = false; }
+    }
+
+    // Week Generator (7 Posts)
+    async function brewWeek() {
+        const email = document.getElementById('email').value;
+        const name = document.getElementById('name').value;
+        if(!email || !name) return alert("Fill Email and Name");
+
+        const btn = document.getElementById('go-week');
+        btn.innerText = "Drafting Week..."; btn.disabled = true;
+
+        try {
+            const res = await fetch('/generate-week', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({email: email, cafe_name: name, language: state.lang, mood: state.mood, goal: state.goal})
+            });
+            const data = await res.json();
+            
+            if(data.error === "need_premium_or_credits") {
+                alert("The Week Generator requires a Monthly Plan or at least 7 credits.");
+                return toggle('priceSheet', true);
+            }
+
+            const box = document.getElementById('results');
+            box.innerHTML = '<h2 style="text-align:center; font-family:Fraunces; font-weight:300;">Weekly Plan</h2>';
+            
+            // Parsing the days
+            const dayBlocks = data.week_content.split(/---|Day \d:/).filter(d => d.trim().length > 10);
+            
+            dayBlocks.forEach((block, i) => {
+                const parts = block.split('|');
+                const cap = parts[0] ? parts[0].trim() : "";
+                const pic = parts[1] ? parts[1].trim() : "Focus on natural light.";
+                box.innerHTML += `
+    <div class="receipt">
+        <span style="font-size:9px; color:var(--accent); font-weight:600;">DAY ${i+1}</span>
+        <div class="content-to-copy">
+            ${cap}
+        </div>
+        <div class="photo-tip">📸 <strong>PHOTO SCRIPT:</strong><br>${pic}</div>
+        
+        <div class="actions">
+            <button class="action-btn btn-copy" onclick="copy(this.closest('.receipt').querySelector('.content-to-copy').innerText.trim())">
+                📋 COPY
+            </button>
+            <a href="javascript:void(0)" class="action-btn btn-instagram" onclick="openIG()">
+                📸 INSTAGRAM
+            </a>
+        </div>
+    </div>`;
+            });
+            toggle('resultSheet', true);
+        } catch { alert("Error connecting to server"); }
+        finally { btn.innerText = "✨ Week Generator (7 Posts)"; btn.disabled = false; }
+    }
+
+    function copy(t) { 
+        navigator.clipboard.writeText(t).then(() => alert("Caption copied!")); 
+    }
+
+    async function buy(plan) {
+        const email = document.getElementById('email').value;
+        if(!email) return alert("Enter email first");
+        const res = await fetch('/create-checkout-session', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({email, plan})
+        });
+        const d = await res.json();
+        if(d.url) location.href = d.url;
+    }
+
+    window.onload = () => {
+        document.getElementById('email').value = localStorage.getItem('email') || '';
+        document.getElementById('name').value = localStorage.getItem('name') || '';
+    };
+</script>
 </body>
 </html>
