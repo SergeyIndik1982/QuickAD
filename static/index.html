@@ -10,7 +10,27 @@
         :root { --bg: #F8F5F2; --accent: #A39184; --text: #4A443F; --border: #E8E2DC; }
         body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
         .app { width: 100%; max-width: 420px; }
-        header h1 { font-family: 'Fraunces', serif; text-align: center; font-weight: 300; font-size: 2.2rem; }
+        header {
+    display: flex;
+    align-items: center;    /* Центрирует лого и текст по вертикали */
+    justify-content: center; /* Центрирует всю группу по горизонтали */
+    gap: 12px;              /* Расстояние между логотипом и текстом */
+    margin-bottom: 25px;
+}
+
+.logo-img {
+    height: 42px;           /* Оптимальная высота под размер шрифта */
+    width: auto;
+    display: block;
+    /* Если у логотипа все еще белый фон, он сольется с белым фоном сайта */
+}
+
+header h1 {
+    margin: 0;
+    font-family: 'Fraunces', serif;
+    font-size: 1.8rem;
+    font-weight: 300;
+}
         header span { color: var(--accent); font-weight: 600; }
         .card { background: white; padding: 24px; border-radius: 24px; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.02); margin-bottom: 20px; }
         label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; color: #8C7B6F; display: block; margin-bottom: 10px; }
