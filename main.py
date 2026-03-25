@@ -239,4 +239,4 @@ Day 2:
         result = res.json()
         content = result["choices"][0]["message"]["content"]
 
-        return {"week_content": content
+        return {"week_content": content}
