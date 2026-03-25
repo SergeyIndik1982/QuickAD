@@ -200,43 +200,25 @@ async def generate_week(data: GenerateRequest):
         "Authorization": f"Bearer {GROQ_API_KEY}",
         "Content-Type": "application/json"
     }
-
     try:
         payload = {
             "model": "llama-3.3-70b-versatile",
             "messages": [
-                {
-                    "role": "system",
-                    "content": """
-Create 7 short Instagram captions for a cafe.
-
-Rules:
-- very short
-- all different
-- natural
-- format:
-Day 1:
-Caption | Photo idea
----
-Day 2:
-...
-"""
-                },
-                {
-                    "role": "user",
-                    "content": f"{data.cafe_name}, {data.mood}, {data.goal}"
-                }
+                {"role": "system", "content": "Create 7 short Instagram captions for a cafe. Format: Day X: Caption | Photo idea. All different, natural."},
+                {"role": "user", "content": f"Cafe: {data.cafe_name}, Mood: {data.mood}, Goal: {data.goal}"}
             ],
             "temperature": 1.2,
-            "max_tokens": 300
+            "max_tokens": 400
         }
-
         res = requests.post(GROQ_URL, headers=headers, json=payload)
-
+        
         if res.status_code != 200:
             return {"error": "generation_failed"}
-
+        
         result = res.json()
         content = result["choices"][0]["message"]["content"]
-
+        
         return {"week_content": content}
+
+    except Exception as e:
+        return {"error": str(e)}
