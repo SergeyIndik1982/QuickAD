@@ -145,50 +145,44 @@ Caption | Photo idea
 
 @app.post("/generate")
 async def generate(data: GenerateRequest):
-    headers = {
-        "Authorization": f"Bearer {GROQ_API_KEY}",
-        "Content-Type": "application/json"
-    }
+    async with httpx.AsyncClient() as client:
+        headers = {
+            "Authorization": f"Bearer {GROQ_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        
+        # Запускаем генерацию вариантов параллельно, а не в цикле!
+        tasks = []
+        payload = {
+            "model": "llama-3.3-70b-versatile",
+            "messages": [
+                {"role": "system", "content": build_prompt(data)},
+                {"role": "user", "content": f"Write a caption for {data.cafe_name}"}
+            ],
+            "temperature": 1.1,
+            "max_tokens": 100
+        }
 
-    texts = []
+        # Выполняем запросы параллельно для скорости
+        responses = await asyncio.gather(*[
+            client.post(GROQ_URL, headers=headers, json=payload, timeout=10) 
+            for _ in range(data.variants)
+        ])
 
-    for _ in range(data.variants):
-        try:
-            payload = {
-                "model": "llama-3.3-70b-versatile",
-                "messages": [
-                    {"role": "system", "content": build_prompt(data)},
-                    {"role": "user", "content": f"Write a caption for {data.cafe_name}"}
-                ],
-                "temperature": 1.1,
-                "max_tokens": 80
-            }
+        results = []
+        for res in responses:
+            if res.status_code == 200:
+                content = res.json()["choices"][0]["message"]["content"].strip()
+                # Логика ватермарки
+                if "|" in content:
+                    cap, photo = content.split("|", 1)
+                    results.append(f"{cap.strip()}\n\n☕ Cafe Caption | {photo.strip()}")
+                else:
+                    results.append(f"{content}\n\n☕ Cafe Caption")
+            else:
+                results.append("Generation failed")
 
-            res = requests.post(GROQ_URL, headers=headers, json=payload, timeout=10)
-
-            if res.status_code != 200:
-                texts.append("Error generating text")
-                continue
-
-            result = res.json()
-            text = result["choices"][0]["message"]["content"].strip()
-
-            # --- WATERMARK (FREE USERS) ---
-            caption_parts = text.split("|")
-            caption = caption_parts[0].strip()
-            photo = caption_parts[1].strip() if len(caption_parts) > 1 else ""
-
-            # временно считаем всех free
-            caption += "\n\n☕ Cafe Caption"
-
-            final = f"{caption} | {photo}"
-
-            texts.append(final)
-
-        except Exception:
-            texts.append("Connection error")
-
-    return {"texts": texts}
+        return {"texts": results}
 
 # -----------------------
 # WEEK GENERATOR (PREMIUM)
