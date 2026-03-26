@@ -1,5 +1,7 @@
 fastapi
 uvicorn
-requests
+httpx
 stripe
-pydantic
+sqlalchemy
+psycopg2-binary
+requests
