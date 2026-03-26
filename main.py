@@ -23,7 +23,19 @@ class User(Base):
     credits = Column(Integer, default=3) # Даем 3 бесплатных генерации
 
 Base.metadata.create_all(bind=engine)
+# --- DATABASE SETUP ---
+DATABASE_URL = os.getenv("DATABASE_URL")
 
+if DATABASE_URL is None:
+    # Если мы локально и забыли про БД, используем SQLite, чтобы хотя бы запуститься
+    print("⚠️ DATABASE_URL is not set. Falling back to SQLite...")
+    DATABASE_URL = "sqlite:///./test.db"
+else:
+    # Исправляем старый протокол postgres:// на новый postgresql:// для SQLAlchemy
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+engine = create_engine(DATABASE_URL)
 # --- APP SETUP ---
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
