@@ -1,32 +1,49 @@
 import os
-import requests
+import httpx
 import stripe
-from fastapi import FastAPI, Request, Header, HTTPException
+import asyncio
+from fastapi import FastAPI, Request, Header, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
+from sqlalchemy import create_engine, Column, String, Boolean, Integer
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, Session
 
+# --- DATABASE SETUP (Railway PostgreSQL) ---
+DATABASE_URL = os.getenv("DATABASE_URL") # Railway подставляет это автоматически
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+class User(Base):
+    __tablename__ = "users"
+    email = Column(String, primary_key=True, index=True)
+    is_premium = Column(Boolean, default=False)
+    credits = Column(Integer, default=3) # Даем 3 бесплатных генерации
+
+Base.metadata.create_all(bind=engine)
+
+# --- APP SETUP ---
 app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 # ENV
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
-
 stripe.api_key = STRIPE_SECRET_KEY
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
-# -----------------------
-# MODELS
-# -----------------------
+# Dependency для получения сессии БД
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
+# --- MODELS ---
 class GenerateRequest(BaseModel):
     email: str
     cafe_name: str
@@ -35,6 +52,112 @@ class GenerateRequest(BaseModel):
     goal: str
     variants: int = 2
 
+class CheckoutRequest(BaseModel):
+    email: str
+    plan: str
+
+# --- STRIPE LOGIC ---
+
+@app.post("/create-checkout-session")
+async def create_checkout_session(data: CheckoutRequest):
+    DOMAIN = "https://quickad-production.up.railway.app"
+    try:
+        # Определяем цену и тип оплаты
+        is_subscription = data.plan == "monthly"
+        session = stripe.checkout.Session.create(
+            mode="subscription" if is_subscription else "payment",
+            customer_email=data.email,
+            line_items=[{
+                "price_data": {
+                    "currency": "usd",
+                    "product_data": {"name": "Cafe Content Pro"},
+                    "unit_amount": 1500 if is_subscription else 500,
+                    "recurring": {"interval": "month"} if is_subscription else None,
+                },
+                "quantity": 1,
+            }],
+            success_url=f"{DOMAIN}/?success=true",
+            cancel_url=f"{DOMAIN}/?canceled=true",
+        )
+        return {"url": session.url}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/webhook")
+async def stripe_webhook(request: Request, db: Session = Depends(get_db), stripe_signature: str = Header(None)):
+    payload = await request.body()
+    try:
+        event = stripe.Webhook.construct_event(payload, stripe_signature, STRIPE_WEBHOOK_SECRET)
+    except:
+        raise HTTPException(status_code=400)
+
+    if event["type"] == "checkout.session.completed":
+        session = event["data"]["object"]
+        email = session["customer_email"]
+        
+        # Обновляем или создаем пользователя в базе
+        user = db.query(User).filter(User.email == email).first()
+        if not user:
+            user = User(email=email, is_premium=True, credits=100)
+            db.add(user)
+        else:
+            user.is_premium = True
+            user.credits += 50
+        db.commit()
+        print(f"✅ User {email} upgraded to Premium")
+
+    return {"status": "ok"}
+
+# --- AI GENERATION LOGIC ---
+
+def build_prompt(data):
+    return f"""You are a local barista. Write a natural Instagram caption for {data.cafe_name}. 
+    Style: {data.mood}. Goal: {data.goal}. Language: {data.language}.
+    Rules: Max 2 lines. No marketing fluff. One ☕ allowed."""
+
+@app.post("/generate")
+async def generate(data: GenerateRequest, db: Session = Depends(get_db)):
+    # 1. Проверка лимитов
+    user = db.query(User).filter(User.email == data.email).first()
+    if not user:
+        user = User(email=data.email, is_premium=False, credits=3)
+        db.add(user)
+        db.commit()
+    
+    if user.credits <= 0 and not user.is_premium:
+        return {"error": "No credits left. Please upgrade."}
+
+    # 2. Генерация через Groq (асинхронно)
+    async with httpx.AsyncClient() as client:
+        headers = {"Authorization": f"Bearer {GROQ_API_KEY}"}
+        payload = {
+            "model": "llama-3.3-70b-versatile",
+            "messages": [{"role": "system", "content": build_prompt(data)},
+                         {"role": "user", "content": "Write it now."}],
+            "temperature": 1.0
+        }
+        
+        responses = await asyncio.gather(*[
+            client.post(GROQ_URL, headers=headers, json=payload, timeout=10) 
+            for _ in range(data.variants)
+        ])
+
+        # 3. Списание кредита (если не премиум)
+        if not user.is_premium:
+            user.credits -= 1
+            db.commit()
+
+        results = [res.json()["choices"][0]["message"]["content"].strip() for res in responses if res.status_code == 200]
+        return {"texts": results, "remaining_credits": user.credits}
+
+@app.post("/generate-week")
+async def generate_week(data: GenerateRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == data.email).first()
+    if not user or not user.is_premium:
+        raise HTTPException(status_code=403, detail="Upgrade to Premium for weekly plans")
+
+    # Здесь логика генерации на неделю...
+    return {"status": "Coming soon for Pro users"}
 class CheckoutRequest(BaseModel):
     email: str
     plan: str
