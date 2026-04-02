@@ -111,17 +111,19 @@ header h1 {
     <img src="logo.png" alt="Logo" class="logo-img">
     <h1>Cafe <span>Caption</span></h1>
 </header>
-   <div id="auth-container">
-    <button id="login-btn" onclick="loginWithGoogle()" class="btn-premium">
-        Continue with Google
-    </button>
     <div id="user-info" style="display: none;">
         <span id="user-email"></span>
         <span id="user-credits" class="credits-badge">0 credits</span>
     </div>
 </div>
     <div class="card">
+   <div id="auth-container">
+    <button id="login-btn" onclick="loginWithGoogle()" class="btn-premium">
+        Continue with Google
+    </button>
+
         <label>Email</label>
+       
         <input type="email" id="email" placeholder="Your email..." oninput="localStorage.setItem('email', this.value)">
         
         <label>Language</label>
