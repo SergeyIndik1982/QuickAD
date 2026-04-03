@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -105,106 +106,233 @@ header h1 {
 </head>
 <body>
 
-<div class="card">
-    <div id="auth-section">
-        <div id="logged-out">
-            <label>Access</label>
-            <button id="login-btn" onclick="loginWithGoogle()" class="btn-premium" style="margin-bottom: 20px;">
-                Continue with Google
-            </button>
-        </div>
+<div class="app">
+   <header>
+    <img src="logo.png" alt="Logo" class="logo-img">
+    <h1>Cafe <span>Caption</span></h1>
+</header>
+    <div id="user-info" style="display: none;">
+        <span id="user-email"></span>
+        <span id="user-credits" class="credits-badge">0 credits</span>
+    </div>
+</div>
+    <div class="card">
+   <div id="auth-container">
+    <button id="login-btn" onclick="loginWithGoogle()" class="btn-premium">
+        Continue with Google
+    </button>
+
+        <label>Email</label>
+       
+        <input type="email" id="email" placeholder="Your email..." oninput="localStorage.setItem('email', this.value)">
         
-        <div id="logged-in" style="display: none; margin-bottom: 20px; padding: 10px; background: #f9f9f9; border-radius: 12px; border: 1px dashed var(--accent);">
-            <label>Active Account</label>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span id="display-email" style="font-size: 13px; font-weight: 600;"></span>
-                <span id="user-credits" style="font-size: 11px; background: var(--accent); color: white; padding: 2px 8px; border-radius: 10px;">0 credits</span>
-            </div>
+        <label>Language</label>
+        <div class="lang-bar">
+            <div class="lang active" onclick="setL('English', this)">EN</div>
+            <div class="lang" onclick="setL('German', this)">DE</div>
+            <div class="lang" onclick="setL('French', this)">FR</div>
+            <div class="lang" onclick="setL('Italian', this)">IT</div>
+            <div class="lang" onclick="setL('Russian', this)">RU</div>
         </div>
+
+        <label>Cafe Name</label>
+        <input type="text" id="name" placeholder="Name of your space..." oninput="localStorage.setItem('name', this.value)">
+
+        <label>Mood</label>
+        <div class="segments">
+            <div class="seg active" onclick="setV('mood','Poetic',this)">Poetic</div>
+            <div class="seg" onclick="setV('mood','Minimal',this)">Minimal</div>
+            <div class="seg" onclick="setV('mood','Witty',this)">Witty</div>
+        </div>
+
+        <label>Focus</label>
+<div class="segments">
+    <div class="seg active" onclick="setV('goal','Atmosphere',this)">Atmosphere</div>
+    <div class="seg" onclick="setV('goal','Drinks',this)">Drinks</div>
+    <div class="seg" onclick="setV('goal','Food',this)">Food</div>
+    <div class="seg" onclick="setV('goal','People',this)">People</div>
+    <div class="seg" onclick="setV('goal','Daily',this)">Daily</div>
+</div>
+
+        <button class="btn-main" id="go" onclick="brew()">Brew Content</button>
+        <button class="btn-premium" id="go-week" onclick="brewWeek()">✨ Week Generator (7 Posts)</button>
+        
     </div>
+</div>
 
-    <input type="hidden" id="email">
-
-    <label>Language</label>
-    <div class="lang-bar">
-        <div class="lang active" onclick="setL('English', this)">EN</div>
-        <div class="lang" onclick="setL('German', this)">DE</div>
-        <div class="lang" onclick="setL('French', this)">FR</div>
-        <div class="lang" onclick="setL('Italian', this)">IT</div>
-        <div class="lang" onclick="setL('Russian', this)">RU</div>
-    </div>
-
-    <label>Cafe Name</label>
-    <input type="text" id="name" placeholder="Name of your space..." oninput="localStorage.setItem('name', this.value)">
-
-    <label>Mood</label>
-    <div class="segments">
-        <div class="seg active" onclick="setV('mood','Poetic',this)">Poetic</div>
-        <div class="seg" onclick="setV('mood','Minimal',this)">Minimal</div>
-        <div class="seg" onclick="setV('mood','Witty',this)">Witty</div>
-    </div>
-
-    <label>Focus</label>
-    <div class="segments">
-        <div class="seg active" onclick="setV('goal','Atmosphere',this)">Atmosphere</div>
-        <div class="seg" onclick="setV('goal','Drinks',this)">Drinks</div>
-        <div class="seg" onclick="setV('goal','Food',this)">Food</div>
-        <div class="seg" onclick="setV('goal','People',this)">People</div>
-        <div class="seg" onclick="setV('goal','Daily',this)">Daily</div>
-    </div>
-
-    <button class="btn-main" id="go" onclick="brew()">Brew Content</button>
-    <button class="btn-premium" id="go-week" onclick="brewWeek()" style="margin-top: 10px;">✨ Week Generator (7 Posts)</button>
+<div class="overlay" id="blur" onclick="toggleAll()"></div>
+<div class="sheet" id="resultSheet"><div id="results"></div></div>
+<div class="sheet" id="priceSheet">
+    <h3 style="text-align:center;">The Coffee Menu</h3>
+    <button class="btn-main" onclick="buy('single')" style="margin-bottom:10px;">$5 - 50 Credits</button>
+    <button class="btn-main" onclick="buy('monthly')">$15/mo - Unlimited</button>
 </div>
 
 <script>
-    // ИНИЦИАЛИЗАЦИЯ SUPABASE (Вставь свои данные!)
-    const _supabase = supabase.createClient('https://xxx.supabase.co', 'eyJhbGciOiJIUzI1...');
-
     let state = { lang: 'English', mood: 'Poetic', goal: 'Atmosphere' };
-    let userEmail = null;
 
-    async function loginWithGoogle() {
-        const { error } = await _supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: { redirectTo: window.location.origin }
-        });
-        if (error) alert("Login error: " + error.message);
+    
+    function openIG() {
+    // Эта схема пытается открыть сразу экран выбора фото в приложении
+    const igLibraryUrl = "instagram://library?AssetPath=null"; 
+    const webUrl = "https://www.instagram.com/";
+
+    // Проверка: если мы на мобильном устройстве
+    if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+        window.location.href = igLibraryUrl;
+        
+        // Резервный переход, если приложение не открылось за 700мс
+        setTimeout(() => {
+            window.open(webUrl, '_blank');
+        }, 700);
+    } else {
+        // Если открыли с ПК — просто открываем сайт
+        window.open(webUrl, '_blank');
+    }
+    } 
+    function setL(l, el) { 
+        state.lang = l; 
+        document.querySelectorAll('.lang').forEach(x=>x.classList.remove('active')); 
+        el.classList.add('active'); 
+    }
+    
+    function setV(k, v, el) { 
+        state[k] = v; 
+        el.parentElement.querySelectorAll('.seg').forEach(x=>x.classList.remove('active')); 
+        el.classList.add('active'); 
     }
 
-    async function checkUser() {
-        const { data: { user } } = await _supabase.auth.getUser();
-        if (user) {
-            userEmail = user.email;
-            document.getElementById('email').value = user.email; // Для совместимости с твоими функциями
-            document.getElementById('display-email').innerText = user.email;
-            
-            document.getElementById('logged-out').style.display = 'none';
-            document.getElementById('logged-in').style.display = 'block';
-            
-            // Здесь вызываем твой бэкенд для получения кредитов
-            fetchCredits(user.email);
-        }
+    function toggle(id, s) { 
+        document.getElementById(id).classList.toggle('active', s); 
+        document.getElementById('blur').style.display = s ? 'block' : 'none'; 
     }
 
-    async function fetchCredits(email) {
+    function toggleAll() { 
+        document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('active')); 
+        document.getElementById('blur').style.display = 'none'; 
+    }
+
+    // Single Post Generator
+    async function brew() {
+        const email = document.getElementById('email').value;
+        const name = document.getElementById('name').value;
+        if(!email || !name) return alert("Fill Email and Name");
+
+        const btn = document.getElementById('go');
+        btn.innerText = "Steeping..."; btn.disabled = true;
+        
         try {
-            // Создай такой эндпоинт в main.py, чтобы он возвращал только число кредитов
-            const res = await fetch(`/get-credits?email=${email}`);
+            const res = await fetch('/generate', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({email: email, cafe_name: name, language: state.lang, mood: state.mood, goal: state.goal})
+            });
             const data = await res.json();
-            document.getElementById('user-credits').innerText = `${data.credits} credits`;
-        } catch (e) { console.log("Credits sync error"); }
+            if(data.error === "no_credits") return toggle('priceSheet', true);
+            
+            const box = document.getElementById('results');
+            box.innerHTML = '';
+            data.texts.forEach(t => {
+                const parts = t.split('|');
+                const cap = parts[0] ? parts[0].trim() : "";
+                const pic = parts[1] ? parts[1].trim() : "Natural light, focus on texture.";
+                box.innerHTML += `
+    <div class="receipt">
+        <div class="content-to-copy">
+            ${cap}
+        </div>
+        <div class="photo-tip">📸 <strong>PHOTO SCRIPT:</strong><br>${pic}</div>
+        
+        <div class="actions">
+            <button class="action-btn btn-copy" onclick="copy(this.closest('.receipt').querySelector('.content-to-copy').innerText.trim())">
+                📋 COPY
+            </button>
+            <a href="javascript:void(0)" class="action-btn btn-instagram" onclick="openIG()">
+                📸 INSTAGRAM
+            </a>
+        </div>
+    </div>`;
+            });
+            toggle('resultSheet', true);
+        } catch { alert("Error connecting to server"); }
+        finally { btn.innerText = "Brew Content"; btn.disabled = false; }
     }
 
-    // Твои функции brew, setL, setV, copy и т.д. остаются без изменений
-    // Только в brew() добавь проверку: if(!userEmail) return loginWithGoogle();
+    // Week Generator (7 Posts)
+    async function brewWeek() {
+        const email = document.getElementById('email').value;
+        const name = document.getElementById('name').value;
+        if(!email || !name) return alert("Fill Email and Name");
+
+        const btn = document.getElementById('go-week');
+        btn.innerText = "Drafting Week..."; btn.disabled = true;
+
+        try {
+            const res = await fetch('/generate-week', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({email: email, cafe_name: name, language: state.lang, mood: state.mood, goal: state.goal})
+            });
+            const data = await res.json();
+            
+            if(data.error === "need_premium_or_credits") {
+                alert("The Week Generator requires a Monthly Plan or at least 7 credits.");
+                return toggle('priceSheet', true);
+            }
+
+            const box = document.getElementById('results');
+            box.innerHTML = '<h2 style="text-align:center; font-family:Fraunces; font-weight:300;">Weekly Plan</h2>';
+            
+            // Parsing the days
+            const dayBlocks = data.week_content.split(/---|Day \d:/).filter(d => d.trim().length > 10);
+            
+            dayBlocks.forEach((block, i) => {
+                const parts = block.split('|');
+                const cap = parts[0] ? parts[0].trim() : "";
+                const pic = parts[1] ? parts[1].trim() : "Focus on natural light.";
+                box.innerHTML += `
+    <div class="receipt">
+        <span style="font-size:9px; color:var(--accent); font-weight:600;">DAY ${i+1}</span>
+        <div class="content-to-copy">
+            ${cap}
+        </div>
+        <div class="photo-tip">📸 <strong>PHOTO SCRIPT:</strong><br>${pic}</div>
+        
+        <div class="actions">
+            <button class="action-btn btn-copy" onclick="copy(this.closest('.receipt').querySelector('.content-to-copy').innerText.trim())">
+                📋 COPY
+            </button>
+            <a href="javascript:void(0)" class="action-btn btn-instagram" onclick="openIG()">
+                📸 INSTAGRAM
+            </a>
+        </div>
+    </div>`;
+            });
+            toggle('resultSheet', true);
+        } catch { alert("Error connecting to server"); }
+        finally { btn.innerText = "✨ Week Generator (7 Posts)"; btn.disabled = false; }
+    }
+
+    function copy(t) { 
+        navigator.clipboard.writeText(t).then(() => alert("Caption copied!")); 
+    }
+
+    async function buy(plan) {
+        const email = document.getElementById('email').value;
+        if(!email) return alert("Enter email first");
+        const res = await fetch('/create-checkout-session', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({email, plan})
+        });
+        const d = await res.json();
+        if(d.url) location.href = d.url;
+    }
 
     window.onload = () => {
-        checkUser();
+        document.getElementById('email').value = localStorage.getItem('email') || '';
         document.getElementById('name').value = localStorage.getItem('name') || '';
     };
-
-    // Остальные функции (setL, setV, toggle, brew, brewWeek, copy, buy, openIG) вставь ниже...
 </script>
 </body>
 </html>
