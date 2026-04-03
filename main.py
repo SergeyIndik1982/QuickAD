@@ -14,6 +14,8 @@ from sqlalchemy.orm import sessionmaker, Session
 DATABASE_URL = os.getenv("DATABASE_URL")
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+# Если локально — используем SQLite
 if not DATABASE_URL:
     DATABASE_URL = "sqlite:///./test.db"
 
@@ -27,6 +29,7 @@ class User(Base):
     is_premium = Column(Boolean, default=False)
     credits = Column(Integer, default=3)
 
+# Создаем таблицы при запуске
 Base.metadata.create_all(bind=engine)
 
 # --- APP SETUP ---
@@ -39,6 +42,7 @@ STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
 stripe.api_key = STRIPE_SECRET_KEY
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
+# Dependency для БД
 def get_db():
     db = SessionLocal()
     try:
@@ -46,13 +50,14 @@ def get_db():
     finally:
         db.close()
 
+# Модели данных
 class GenerateRequest(BaseModel):
     email: str
     cafe_name: str
     language: str
     mood: str
     goal: str
-    variants: int = 2
+    variants: int = 1
 
 class CheckoutRequest(BaseModel):
     email: str
@@ -60,16 +65,23 @@ class CheckoutRequest(BaseModel):
 
 # --- AI LOGIC ---
 def build_prompt(data):
-    return f"Write Instagram captions for {data.cafe_name}. Style: {data.mood}. Goal: {data.goal}. Language: {data.language}. Very short, natural. One ☕ allowed."
+    return (f"Write 1 Instagram caption for a cafe named '{data.cafe_name}'. "
+            f"Language: {data.language}. Mood: {data.mood}. Focus: {data.goal}. "
+            "Format: [Caption] | [Photo Idea]. Short, organic, max 1 emoji. "
+            "Example: Morning peace. | Close-up of latte art.")
+
+# --- ENDPOINTS ---
+
 @app.get("/get-credits")
-async def get_credits(email: str):
-    # Твоя логика получения данных из базы Railway
-    user = await db.fetch_user(email) 
+def get_credits(email: str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == email).first()
     if not user:
-        # Если юзера нет в базе, создаем его с 3 стартовыми кредитами
-        await db.create_user(email, credits=3)
-        return {"credits": 3}
-    return {"credits": user['credits']}
+        user = User(email=email, credits=3, is_premium=False)
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    return {"credits": user.credits, "is_premium": user.is_premium}
+
 @app.post("/generate")
 async def generate(data: GenerateRequest, db: Session = Depends(get_db)):
     # 1. Проверка юзера
@@ -80,47 +92,61 @@ async def generate(data: GenerateRequest, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(user)
     
-    # 2. Лимиты
+    # 2. Проверка лимитов
     if not user.is_premium and user.credits <= 0:
-        return {"error": "No credits left. Please upgrade."}
+        return {"error": "no_credits"}
 
-    # 3. Запрос к AI
+    # 3. Запрос к Groq API
     async with httpx.AsyncClient() as client:
         headers = {"Authorization": f"Bearer {GROQ_API_KEY}"}
         payload = {
             "model": "llama-3.3-70b-versatile",
-            "messages": [{"role": "system", "content": build_prompt(data)},
-                         {"role": "user", "content": "Generate now."}],
-            "temperature": 0.8
+            "messages": [
+                {"role": "system", "content": build_prompt(data)},
+                {"role": "user", "content": "Generate now."}
+            ],
+            "temperature": 0.7
         }
         
-        responses = await asyncio.gather(*[
-            client.post(GROQ_URL, headers=headers, json=payload, timeout=15) 
-            for _ in range(data.variants)
-        ])
+        try:
+            # Делаем столько запросов, сколько просил фронтенд
+            tasks = [client.post(GROQ_URL, headers=headers, json=payload, timeout=20) for _ in range(data.variants)]
+            responses = await asyncio.gather(*tasks)
+            
+            results = []
+            for res in responses:
+                if res.status_code == 200:
+                    content = res.json()["choices"][0]["message"]["content"].strip()
+                    results.append(content)
+            
+            if not results:
+                return {"error": "AI service unavailable"}
 
-        # 4. Списание кредитов
-        if not user.is_premium:
-            user.credits -= 1
-            db.commit()
+            # 4. Списание кредитов
+            if not user.is_premium:
+                user.credits -= 1
+                db.commit()
 
-        results = [res.json()["choices"][0]["message"]["content"].strip() for res in responses if res.status_code == 200]
-        return {"texts": results, "remaining_credits": user.credits}
+            return {"texts": results, "remaining_credits": user.credits}
+            
+        except Exception as e:
+            return {"error": str(e)}
 
-# --- STRIPE & WEBHOOK ---
+# --- STRIPE LOGIC ---
 @app.post("/create-checkout-session")
 async def create_checkout_session(data: CheckoutRequest):
-    DOMAIN = "https://quickad-production.up.railway.app"
+    DOMAIN = "https://quickad-production.up.railway.app" # Замени на свой актуальный URL
     try:
+        is_monthly = data.plan == "monthly"
         session = stripe.checkout.Session.create(
-            mode="subscription" if data.plan == "monthly" else "payment",
+            mode="subscription" if is_monthly else "payment",
             customer_email=data.email,
             line_items=[{
                 "price_data": {
                     "currency": "usd",
-                    "product_data": {"name": "Cafe Content Pro"},
-                    "unit_amount": 1500 if data.plan == "monthly" else 500,
-                    "recurring": {"interval": "month"} if data.plan == "monthly" else None,
+                    "product_data": {"name": "Cafe Content Pro" if is_monthly else "50 Credits Pack"},
+                    "unit_amount": 1500 if is_monthly else 500,
+                    "recurring": {"interval": "month"} if is_monthly else None,
                 },
                 "quantity": 1,
             }],
@@ -136,24 +162,32 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db), stripe
     payload = await request.body()
     try:
         event = stripe.Webhook.construct_event(payload, stripe_signature, STRIPE_WEBHOOK_SECRET)
-    except:
+    except Exception:
         raise HTTPException(status_code=400)
 
     if event["type"] == "checkout.session.completed":
         session = event["data"]["object"]
         email = session.get("customer_email")
+        amount = session.get("amount_total")
+        
         if email:
             user = db.query(User).filter(User.email == email).first()
             if user:
-                user.is_premium = True
-                user.credits += 50
+                # Если оплачено $15 — даем безлимит, если $5 — добавляем 50 кредитов
+                if amount >= 1500:
+                    user.is_premium = True
+                else:
+                    user.credits += 50
                 db.commit()
-    return {"status": "ok"}
+                
+    return {"status": "success"}
 
+# --- SERVING FRONTEND ---
 @app.get("/", response_class=HTMLResponse)
 def index():
     try:
+        # Убедись, что файл лежит в папке static
         with open("static/index.html", "r", encoding="utf-8") as f:
             return f.read()
-    except:
-        return "Frontend file not found in /static folder"
+    except FileNotFoundError:
+        return "Error: static/index.html not found. Check your Railway folder structure."
