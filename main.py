@@ -61,7 +61,15 @@ class CheckoutRequest(BaseModel):
 # --- AI LOGIC ---
 def build_prompt(data):
     return f"Write Instagram captions for {data.cafe_name}. Style: {data.mood}. Goal: {data.goal}. Language: {data.language}. Very short, natural. One ☕ allowed."
-
+@app.get("/get-credits")
+async def get_credits(email: str):
+    # Твоя логика получения данных из базы Railway
+    user = await db.fetch_user(email) 
+    if not user:
+        # Если юзера нет в базе, создаем его с 3 стартовыми кредитами
+        await db.create_user(email, credits=3)
+        return {"credits": 3}
+    return {"credits": user['credits']}
 @app.post("/generate")
 async def generate(data: GenerateRequest, db: Session = Depends(get_db)):
     # 1. Проверка юзера
