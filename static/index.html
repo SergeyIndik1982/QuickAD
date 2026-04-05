@@ -169,170 +169,158 @@ header h1 {
 </div>
 
 <script>
-    let state = { lang: 'English', mood: 'Poetic', goal: 'Atmosphere' };
+// --- 1. ИНИЦИАЛИЗАЦИЯ (Замени данные на свои из Supabase) ---
+const _supabase = supabase.createClient('https://xxx.supabase.co', 'eyJhbGciOiJIUzI1...');
 
-    
-    function openIG() {
-    // Эта схема пытается открыть сразу экран выбора фото в приложении
-    const igLibraryUrl = "instagram://library?AssetPath=null"; 
-    const webUrl = "https://www.instagram.com/";
+let state = { lang: 'English', mood: 'Poetic', goal: 'Atmosphere' };
+let userEmail = null;
 
-    // Проверка: если мы на мобильном устройстве
-    if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-        window.location.href = igLibraryUrl;
+// --- 2. АВТОРИЗАЦИЯ ---
+async function loginWithGoogle() {
+    const { error } = await _supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: window.location.origin }
+    });
+    if (error) alert("Login error: " + error.message);
+}
+
+async function checkUser() {
+    const { data: { user } } = await _supabase.auth.getUser();
+    if (user) {
+        userEmail = user.email;
+        document.getElementById('email').value = user.email;
+        document.getElementById('display-email').innerText = user.email;
         
-        // Резервный переход, если приложение не открылось за 700мс
-        setTimeout(() => {
-            window.open(webUrl, '_blank');
-        }, 700);
-    } else {
-        // Если открыли с ПК — просто открываем сайт
-        window.open(webUrl, '_blank');
-    }
-    } 
-    function setL(l, el) { 
-        state.lang = l; 
-        document.querySelectorAll('.lang').forEach(x=>x.classList.remove('active')); 
-        el.classList.add('active'); 
-    }
-    
-    function setV(k, v, el) { 
-        state[k] = v; 
-        el.parentElement.querySelectorAll('.seg').forEach(x=>x.classList.remove('active')); 
-        el.classList.add('active'); 
-    }
-
-    function toggle(id, s) { 
-        document.getElementById(id).classList.toggle('active', s); 
-        document.getElementById('blur').style.display = s ? 'block' : 'none'; 
-    }
-
-    function toggleAll() { 
-        document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('active')); 
-        document.getElementById('blur').style.display = 'none'; 
-    }
-
-    // Single Post Generator
-    async function brew() {
-        const email = document.getElementById('email').value;
-        const name = document.getElementById('name').value;
-        if(!email || !name) return alert("Fill Email and Name");
-
-        const btn = document.getElementById('go');
-        btn.innerText = "Steeping..."; btn.disabled = true;
+        document.getElementById('logged-out').style.display = 'none';
+        document.getElementById('logged-in').style.display = 'block';
         
-        try {
-            const res = await fetch('/generate', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({email: email, cafe_name: name, language: state.lang, mood: state.mood, goal: state.goal})
-            });
-            const data = await res.json();
-            if(data.error === "no_credits") return toggle('priceSheet', true);
-            
-            const box = document.getElementById('results');
-            box.innerHTML = '';
-            data.texts.forEach(t => {
-                const parts = t.split('|');
-                const cap = parts[0] ? parts[0].trim() : "";
-                const pic = parts[1] ? parts[1].trim() : "Natural light, focus on texture.";
-                box.innerHTML += `
-    <div class="receipt">
-        <div class="content-to-copy">
-            ${cap}
-        </div>
-        <div class="photo-tip">📸 <strong>PHOTO SCRIPT:</strong><br>${pic}</div>
+        // Запрашиваем актуальный баланс у бэкенда
+        fetchCredits(user.email);
+    }
+}
+
+async function fetchCredits(email) {
+    try {
+        const res = await fetch(`/get-credits?email=${email}`);
+        const data = await res.json();
         
-        <div class="actions">
-            <button class="action-btn btn-copy" onclick="copy(this.closest('.receipt').querySelector('.content-to-copy').innerText.trim())">
-                📋 COPY
-            </button>
-            <a href="javascript:void(0)" class="action-btn btn-instagram" onclick="openIG()">
-                📸 INSTAGRAM
-            </a>
-        </div>
-    </div>`;
-            });
-            toggle('resultSheet', true);
-        } catch { alert("Error connecting to server"); }
-        finally { btn.innerText = "Brew Content"; btn.disabled = false; }
+        const creditLabel = document.getElementById('user-credits');
+        if (data.is_premium) {
+            creditLabel.innerText = "PREMIUM ✨";
+            creditLabel.style.background = "#4A443F";
+        } else {
+            creditLabel.innerText = `${data.credits} credits`;
+            creditLabel.style.background = "var(--accent)";
+        }
+    } catch (e) { 
+        console.log("Sync error"); 
     }
+}
 
-    // Week Generator (7 Posts)
-    async function brewWeek() {
-        const email = document.getElementById('email').value;
-        const name = document.getElementById('name').value;
-        if(!email || !name) return alert("Fill Email and Name");
+// --- 3. ГЕНЕРАЦИЯ (BREW) ---
+async function brew() {
+    if (!userEmail) return loginWithGoogle();
 
-        const btn = document.getElementById('go-week');
-        btn.innerText = "Drafting Week..."; btn.disabled = true;
+    const name = document.getElementById('name').value;
+    if (!name) return alert("Please enter Cafe Name");
 
-        try {
-            const res = await fetch('/generate-week', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({email: email, cafe_name: name, language: state.lang, mood: state.mood, goal: state.goal})
-            });
-            const data = await res.json();
-            
-            if(data.error === "need_premium_or_credits") {
-                alert("The Week Generator requires a Monthly Plan or at least 7 credits.");
-                return toggle('priceSheet', true);
-            }
+    const btn = document.getElementById('go');
+    btn.innerText = "Steeping...";
+    btn.disabled = true;
 
-            const box = document.getElementById('results');
-            box.innerHTML = '<h2 style="text-align:center; font-family:Fraunces; font-weight:300;">Weekly Plan</h2>';
-            
-            // Parsing the days
-            const dayBlocks = data.week_content.split(/---|Day \d:/).filter(d => d.trim().length > 10);
-            
-            dayBlocks.forEach((block, i) => {
-                const parts = block.split('|');
-                const cap = parts[0] ? parts[0].trim() : "";
-                const pic = parts[1] ? parts[1].trim() : "Focus on natural light.";
-                box.innerHTML += `
-    <div class="receipt">
-        <span style="font-size:9px; color:var(--accent); font-weight:600;">DAY ${i+1}</span>
-        <div class="content-to-copy">
-            ${cap}
-        </div>
-        <div class="photo-tip">📸 <strong>PHOTO SCRIPT:</strong><br>${pic}</div>
-        
-        <div class="actions">
-            <button class="action-btn btn-copy" onclick="copy(this.closest('.receipt').querySelector('.content-to-copy').innerText.trim())">
-                📋 COPY
-            </button>
-            <a href="javascript:void(0)" class="action-btn btn-instagram" onclick="openIG()">
-                📸 INSTAGRAM
-            </a>
-        </div>
-    </div>`;
-            });
-            toggle('resultSheet', true);
-        } catch { alert("Error connecting to server"); }
-        finally { btn.innerText = "✨ Week Generator (7 Posts)"; btn.disabled = false; }
-    }
-
-    function copy(t) { 
-        navigator.clipboard.writeText(t).then(() => alert("Caption copied!")); 
-    }
-
-    async function buy(plan) {
-        const email = document.getElementById('email').value;
-        if(!email) return alert("Enter email first");
-        const res = await fetch('/create-checkout-session', {
+    try {
+        const res = await fetch('/generate', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({email, plan})
+            body: JSON.stringify({
+                email: userEmail,
+                cafe_name: name,
+                language: state.lang,
+                mood: state.mood,
+                goal: state.goal,
+                variants: 1 
+            })
         });
-        const d = await res.json();
-        if(d.url) location.href = d.url;
-    }
+        
+        const data = await res.json();
 
-    window.onload = () => {
-        document.getElementById('email').value = localStorage.getItem('email') || '';
-        document.getElementById('name').value = localStorage.getItem('name') || '';
-    };
+        if (data.error) {
+            alert(data.error);
+            return;
+        }
+
+        // Вывод результата в "чек"
+        renderResults(data.texts);
+        
+        // Обновляем баланс после траты кредита
+        fetchCredits(userEmail);
+
+    } catch (e) {
+        alert("Connection error");
+    } finally {
+        btn.innerText = "Brew Content";
+        btn.disabled = false;
+    }
+}
+
+// --- 4. ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ИНТЕРФЕЙСА ---
+function renderResults(texts) {
+    const resultBox = document.getElementById('results-container'); // Убедись, что такой ID есть в HTML или создай его
+    // Если контейнера нет, можно выводить в стандартное модальное окно (sheet)
+    
+    let html = '';
+    texts.forEach(text => {
+        const parts = text.split('|');
+        const caption = parts[0] ? parts[0].trim() : text;
+        const photo = parts[1] ? parts[1].trim() : "Natural aesthetic photo";
+
+        html += `
+            <div class="receipt">
+                <div class="content-to-copy">${caption}</div>
+                <div class="photo-tip">📸 <strong>PHOTO:</strong> ${photo}</div>
+                <div class="actions">
+                    <button class="action-btn btn-copy" onclick="copyText(this)">📋 COPY</button>
+                    <button class="action-btn btn-instagram" onclick="window.open('https://instagram.com')">📸 IG</button>
+                </div>
+            </div>
+        `;
+    });
+    
+    // Показываем "шторку" с результатом (Sheet)
+    document.getElementById('sheet-content').innerHTML = html;
+    toggleSheet(true);
+}
+
+function copyText(btn) {
+    const text = btn.closest('.receipt').querySelector('.content-to-copy').innerText;
+    navigator.clipboard.writeText(text);
+    const oldText = btn.innerText;
+    btn.innerText = "COPIED!";
+    setTimeout(() => btn.innerText = oldText, 2000);
+}
+
+function toggleSheet(show) {
+    const sheet = document.getElementById('result-sheet'); // ID твоей шторки
+    if (sheet) sheet.classList.toggle('active', show);
+}
+
+function setL(lang, el) {
+    state.lang = lang;
+    document.querySelectorAll('.lang').forEach(x => x.classList.remove('active'));
+    el.classList.add('active');
+}
+
+function setV(key, val, el) {
+    state[key] = val;
+    el.parentElement.querySelectorAll('.seg').forEach(x => x.classList.remove('active'));
+    el.classList.add('active');
+}
+
+// Запуск при загрузке
+window.onload = () => {
+    checkUser();
+    document.getElementById('name').value = localStorage.getItem('name') || '';
+};
 </script>
 </body>
 </html>
