@@ -39,6 +39,16 @@ STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
 stripe.api_key = STRIPE_SECRET_KEY
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
+@app.get("/get-credits")
+def get_credits(email: str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        # Если юзера нет, создаем его (даем 3 стартовых кредита)
+        user = User(email=email, credits=3, is_premium=False)
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    return {"credits": user.credits, "is_premium": user.is_premium}
 def get_db():
     db = SessionLocal()
     try:
