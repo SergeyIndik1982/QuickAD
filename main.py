@@ -39,28 +39,7 @@ STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
 stripe.api_key = STRIPE_SECRET_KEY
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
-@app.get("/get-credits")
-def get_credits(email: str, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == email).first()
-    if not user:
-        # Если юзера нет, создаем его (даем 3 стартовых кредита)
-        user = User(email=email, credits=3, is_premium=False)
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-    return {"credits": user.credits, "is_premium": user.is_premium}
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-def build_prompt(data):
-    return (f"Write 1 Instagram caption for a cafe named '{data.cafe_name}'. "
-            f"Language: {data.language}. Style: {data.mood}. Focus: {data.goal}. "
-            "Format: [Caption text] | [Photo idea]. Short, organic, max 1 emoji. "
-            "Example: Freshly brewed peace. | A close-up of steam rising from a ceramic mug.")
-@app.post("/generate")
+# --- MODELS & UTILS ---
 class GenerateRequest(BaseModel):
     email: str
     cafe_name: str
@@ -73,8 +52,32 @@ class CheckoutRequest(BaseModel):
     email: str
     plan: str
 
-# --- AI LOGIC ---
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
+def build_prompt(data):
+    return (f"Write 1 Instagram caption for a cafe named '{data.cafe_name}'. "
+            f"Language: {data.language}. Style: {data.mood}. Focus: {data.goal}. "
+            "Format: [Caption text] | [Photo idea]. Short, organic, max 1 emoji. "
+            "Example: Freshly brewed peace. | A close-up of steam rising from a ceramic mug.")
+
+# --- ENDPOINTS ---
+
+@app.get("/get-credits")
+def get_credits(email: str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        user = User(email=email, credits=3, is_premium=False)
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    return {"credits": user.credits, "is_premium": user.is_premium}
+
+@app.post("/generate")
 async def generate(data: GenerateRequest, db: Session = Depends(get_db)):
     # 1. Проверка юзера
     user = db.query(User).filter(User.email == data.email).first()
@@ -111,7 +114,6 @@ async def generate(data: GenerateRequest, db: Session = Depends(get_db)):
         results = [res.json()["choices"][0]["message"]["content"].strip() for res in responses if res.status_code == 200]
         return {"texts": results, "remaining_credits": user.credits}
 
-# --- STRIPE & WEBHOOK ---
 @app.post("/create-checkout-session")
 async def create_checkout_session(data: CheckoutRequest):
     DOMAIN = "https://quickad-production.up.railway.app"
