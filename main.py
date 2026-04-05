@@ -70,8 +70,10 @@ class CheckoutRequest(BaseModel):
 
 # --- AI LOGIC ---
 def build_prompt(data):
-    return f"Write Instagram captions for {data.cafe_name}. Style: {data.mood}. Goal: {data.goal}. Language: {data.language}. Very short, natural. One ☕ allowed."
-
+    return (f"Write 1 Instagram caption for a cafe named '{data.cafe_name}'. "
+            f"Language: {data.language}. Style: {data.mood}. Focus: {data.goal}. "
+            "Format: [Caption text] | [Photo idea]. Short, organic, max 1 emoji. "
+            "Example: Freshly brewed peace. | A close-up of steam rising from a ceramic mug.")
 @app.post("/generate")
 async def generate(data: GenerateRequest, db: Session = Depends(get_db)):
     # 1. Проверка юзера
