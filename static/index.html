@@ -168,13 +168,11 @@ header h1 {
 </div>
 
 <script>
-// --- 1. ИНИЦИАЛИЗАЦИЯ (Замени данные на свои из Supabase) ---
 const _supabase = supabase.createClient('https://fhfxpwgqnwnlafekmmrm.supabase.co', 'sb_publishable_0pLQ3vw_4N55UL-XCiytmA_Jl0HkYEh');
 
 let state = { lang: 'English', mood: 'Poetic', goal: 'Atmosphere' };
 let userEmail = null;
 
-// --- 2. АВТОРИЗАЦИЯ ---
 async function loginWithGoogle() {
     const { error } = await _supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -187,13 +185,9 @@ async function checkUser() {
     const { data: { user } } = await _supabase.auth.getUser();
     if (user) {
         userEmail = user.email;
-        document.getElementById('email').value = user.email;
         document.getElementById('display-email').innerText = user.email;
-        
         document.getElementById('logged-out').style.display = 'none';
         document.getElementById('logged-in').style.display = 'block';
-        
-        // Запрашиваем актуальный баланс у бэкенда
         fetchCredits(user.email);
     }
 }
@@ -202,24 +196,18 @@ async function fetchCredits(email) {
     try {
         const res = await fetch(`/get-credits?email=${email}`);
         const data = await res.json();
-        
         const creditLabel = document.getElementById('user-credits');
         if (data.is_premium) {
             creditLabel.innerText = "PREMIUM ✨";
             creditLabel.style.background = "#4A443F";
         } else {
             creditLabel.innerText = `${data.credits} credits`;
-            creditLabel.style.background = "var(--accent)";
         }
-    } catch (e) { 
-        console.log("Sync error"); 
-    }
+    } catch (e) { console.log("Sync error"); }
 }
 
-// --- 3. ГЕНЕРАЦИЯ (BREW) ---
 async function brew() {
     if (!userEmail) return loginWithGoogle();
-
     const name = document.getElementById('name').value;
     if (!name) return alert("Please enter Cafe Name");
 
@@ -240,20 +228,11 @@ async function brew() {
                 variants: 1 
             })
         });
-        
         const data = await res.json();
+        if (data.error) return alert(data.error);
 
-        if (data.error) {
-            alert(data.error);
-            return;
-        }
-
-        // Вывод результата в "чек"
         renderResults(data.texts);
-        
-        // Обновляем баланс после траты кредита
         fetchCredits(userEmail);
-
     } catch (e) {
         alert("Connection error");
     } finally {
@@ -262,17 +241,12 @@ async function brew() {
     }
 }
 
-// --- 4. ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ИНТЕРФЕЙСА ---
 function renderResults(texts) {
-    const resultBox = document.getElementById('results-container'); // Убедись, что такой ID есть в HTML или создай его
-    // Если контейнера нет, можно выводить в стандартное модальное окно (sheet)
-    
     let html = '';
     texts.forEach(text => {
         const parts = text.split('|');
         const caption = parts[0] ? parts[0].trim() : text;
         const photo = parts[1] ? parts[1].trim() : "Natural aesthetic photo";
-
         html += `
             <div class="receipt">
                 <div class="content-to-copy">${caption}</div>
@@ -281,11 +255,8 @@ function renderResults(texts) {
                     <button class="action-btn btn-copy" onclick="copyText(this)">📋 COPY</button>
                     <button class="action-btn btn-instagram" onclick="window.open('https://instagram.com')">📸 IG</button>
                 </div>
-            </div>
-        `;
+            </div>`;
     });
-    
-    // Показываем "шторку" с результатом (Sheet)
     document.getElementById('sheet-content').innerHTML = html;
     toggleSheet(true);
 }
@@ -293,29 +264,27 @@ function renderResults(texts) {
 function copyText(btn) {
     const text = btn.closest('.receipt').querySelector('.content-to-copy').innerText;
     navigator.clipboard.writeText(text);
-    const oldText = btn.innerText;
     btn.innerText = "COPIED!";
-    setTimeout(() => btn.innerText = oldText, 2000);
+    setTimeout(() => btn.innerText = "📋 COPY", 2000);
 }
 
 function toggleSheet(show) {
-    const sheet = document.getElementById('result-sheet'); // ID твоей шторки
-    if (sheet) sheet.classList.toggle('active', show);
+    document.getElementById('result-sheet').classList.toggle('active', show);
+    document.getElementById('blur').classList.toggle('active', show);
 }
 
-function setL(lang, el) {
-    state.lang = lang;
+function setL(l, el) {
+    state.lang = l;
     document.querySelectorAll('.lang').forEach(x => x.classList.remove('active'));
     el.classList.add('active');
 }
 
-function setV(key, val, el) {
-    state[key] = val;
+function setV(k, v, el) {
+    state[k] = v;
     el.parentElement.querySelectorAll('.seg').forEach(x => x.classList.remove('active'));
     el.classList.add('active');
 }
 
-// Запуск при загрузке
 window.onload = () => {
     checkUser();
     document.getElementById('name').value = localStorage.getItem('name') || '';
