@@ -100,7 +100,26 @@ header h1 {
 /* Скрываем старую версию кнопки copy-btn, если она осталась в HTML */
 .copy-btn { display: none; }
 }    
-        
+ #priceSheet {
+    position: fixed;
+    bottom: -100%; /* Спрятано */
+    left: 0;
+    right: 0;
+    background: white;
+    padding: 40px 20px;
+    border-radius: 30px 30px 0 0;
+    transition: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1000;
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.1);
+}
+
+#priceSheet.active {
+    bottom: 0; /* Выехало */
+}
+
+.overlay {
+    backdrop-filter: blur(8px); /* Красивое размытие фона при открытии тарифов */
+}       
     </style>
 </head>
 <body>
