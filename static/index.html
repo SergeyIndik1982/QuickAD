@@ -163,45 +163,46 @@ header h1 {
 const _supabase = supabase.createClient('https://fhfxpwgqnwnlafekmmrm.supabase.co', 'sb_publishable_0pLQ3vw_4N55UL-XCiytmA_Jl0HkYEh');
 
 let state = { lang: 'English', mood: 'Poetic', goal: 'Atmosphere' };
-let userEmail = null;
 
+// 1. ГЛАВНАЯ ФУНКЦИЯ КНОПКИ "BREW"
+async function brew() {
+    // А. ПРОВЕРКА АВТОРИЗАЦИИ
+    const { data: { user } } = await _supabase.auth.getUser();
+    
+    if (!user) {
+        // Если не залогинен — сохраняем имя кафе и отправляем в Google
+        localStorage.setItem('temp_name', document.getElementById('name').value);
+        return loginWithGoogle();
+    }
+
+    // Б. ПРОВЕРКА КРЕДИТОВ
+    const { data: profile, error } = await _supabase
+        .from('profiles')
+        .select('credits, is_premium')
+        .eq('id', user.id)
+        .single();
+
+    if (profile && !profile.is_premium && profile.credits <= 0) {
+        // Если кредитов 0 — показываем окно тарифов
+        return togglePriceSheet(true);
+    }
+
+    // В. ЕСЛИ ВСЕ ОК — ГЕНЕРИРУЕМ
+    executeGeneration(user.email);
+}
+
+// 2. ФУНКЦИЯ ВХОДА
 async function loginWithGoogle() {
     const { error } = await _supabase.auth.signInWithOAuth({
         provider: 'google',
         options: { redirectTo: window.location.origin }
     });
-    if (error) alert("Login error: " + error.message);
 }
 
-async function checkUser() {
-    const { data: { user } } = await _supabase.auth.getUser();
-    if (user) {
-        userEmail = user.email;
-        document.getElementById('display-email').innerText = user.email;
-        document.getElementById('logged-out').style.display = 'none';
-        document.getElementById('logged-in').style.display = 'block';
-        fetchCredits(user.email);
-    }
-}
-
-async function fetchCredits(email) {
-    try {
-        const res = await fetch(`/get-credits?email=${email}`);
-        const data = await res.json();
-        const creditLabel = document.getElementById('user-credits');
-        if (data.is_premium) {
-            creditLabel.innerText = "PREMIUM ✨";
-            creditLabel.style.background = "#4A443F";
-        } else {
-            creditLabel.innerText = `${data.credits} credits`;
-        }
-    } catch (e) { console.log("Sync error"); }
-}
-
-async function brew() {
-    if (!userEmail) return loginWithGoogle();
-    const name = document.getElementById('name').value;
-    if (!name) return alert("Please enter Cafe Name");
+// 3. САМА ГЕНЕРАЦИЯ (вынесена отдельно)
+async function executeGeneration(email) {
+    const nameInput = document.getElementById('name');
+    if (!nameInput.value) return alert("Please enter Cafe Name");
 
     const btn = document.getElementById('go');
     btn.innerText = "Steeping...";
@@ -212,8 +213,8 @@ async function brew() {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
-                email: userEmail,
-                cafe_name: name,
+                email: email,
+                cafe_name: nameInput.value,
                 language: state.lang,
                 mood: state.mood,
                 goal: state.goal,
@@ -224,7 +225,6 @@ async function brew() {
         if (data.error) return alert(data.error);
 
         renderResults(data.texts);
-        fetchCredits(userEmail);
     } catch (e) {
         alert("Connection error");
     } finally {
@@ -233,53 +233,35 @@ async function brew() {
     }
 }
 
-function renderResults(texts) {
-    let html = '';
-    texts.forEach(text => {
-        const parts = text.split('|');
-        const caption = parts[0] ? parts[0].trim() : text;
-        const photo = parts[1] ? parts[1].trim() : "Natural aesthetic photo";
-        html += `
-            <div class="receipt">
-                <div class="content-to-copy">${caption}</div>
-                <div class="photo-tip">📸 <strong>PHOTO:</strong> ${photo}</div>
-                <div class="actions">
-                    <button class="action-btn btn-copy" onclick="copyText(this)">📋 COPY</button>
-                    <button class="action-btn btn-instagram" onclick="window.open('https://instagram.com')">📸 IG</button>
-                </div>
-            </div>`;
-    });
-    document.getElementById('sheet-content').innerHTML = html;
-    toggleSheet(true);
+// УПРАВЛЕНИЕ ОКНАМИ
+function togglePriceSheet(show) {
+    document.getElementById('priceSheet').classList.toggle('active', show);
+    document.getElementById('blur').style.display = show ? 'block' : 'none';
 }
 
-function copyText(btn) {
-    const text = btn.closest('.receipt').querySelector('.content-to-copy').innerText;
-    navigator.clipboard.writeText(text);
-    btn.innerText = "COPIED!";
-    setTimeout(() => btn.innerText = "📋 COPY", 2000);
+function toggleAll() {
+    toggleSheet(false);
+    togglePriceSheet(false);
 }
 
-function toggleSheet(show) {
-    document.getElementById('result-sheet').classList.toggle('active', show);
-    document.getElementById('blur').classList.toggle('active', show);
+// ФУНКЦИЯ ОПЛАТЫ (Stripe)
+function buy(plan) {
+    // Сюда вставляем ссылки на твои Stripe Checkout
+    if(plan === 'single') {
+        window.location.href = 'https://buy.stripe.com/test_ваша_ссылка_на_50_кредитов';
+    } else {
+        window.location.href = 'https://buy.stripe.com/test_ваша_ссылка_на_анлим';
+    }
 }
 
-function setL(l, el) {
-    state.lang = l;
-    document.querySelectorAll('.lang').forEach(x => x.classList.remove('active'));
-    el.classList.add('active');
-}
-
-function setV(k, v, el) {
-    state[k] = v;
-    el.parentElement.querySelectorAll('.seg').forEach(x => x.classList.remove('active'));
-    el.classList.add('active');
-}
-
+// ВОССТАНОВЛЕНИЕ ДАННЫХ ПОСЛЕ РЕДИРЕКТА GOOGLE
 window.onload = () => {
-    checkUser();
-    document.getElementById('name').value = localStorage.getItem('name') || '';
+    const savedName = localStorage.getItem('temp_name');
+    if (savedName) {
+        document.getElementById('name').value = savedName;
+        localStorage.removeItem('temp_name');
+        // Можно автоматически нажать "Brew", если пользователь только что залогинился
+    }
 };
 </script>
 </body>
