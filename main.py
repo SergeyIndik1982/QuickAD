@@ -46,6 +46,7 @@ class GenerateRequest(BaseModel):
     language: str
     mood: str
     goal: str
+    variants: int = 1
   
 
 class CheckoutRequest(BaseModel):
