@@ -191,24 +191,23 @@ async function brew() {
     
     if (!user) {
         localStorage.setItem('temp_name', document.getElementById('name').value);
-        localStorage.setItem('auto_brew', 'true'); // Флаг для авто-запуска
+        localStorage.setItem('auto_brew', 'true');
         return loginWithGoogle();
     }
 
-    // Проверка профиля
-    const { data: profile } = await _supabase
-        .from('profiles')
-        .select('credits, is_premium')
-        .eq('id', user.id)
-        .single();
+    // ВАЖНО: Запрашиваем кредиты у НАШЕГО сервера, а не у Supabase напрямую
+    try {
+        const res = await fetch(`/get-credits?email=${user.email}`);
+        const profile = await res.json();
 
-    if (profile && !profile.is_premium && profile.credits <= 0) {
-        return togglePriceSheet(true);
+        if (!profile.is_premium && profile.credits <= 0) {
+            return togglePriceSheet(true);
+        }
+        executeGeneration(user.email);
+    } catch (e) {
+        console.error("Auth check failed", e);
     }
-
-    executeGeneration(user.email);
 }
-
 async function loginWithGoogle() {
     await _supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -218,13 +217,12 @@ async function loginWithGoogle() {
 
 async function executeGeneration(email) {
     const nameInput = document.getElementById('name');
-    if (!nameInput.value) return alert("Please enter Cafe Name");
-
     const btn = document.getElementById('go');
     btn.innerText = "Steeping...";
     btn.disabled = true;
 
     try {
+        // Убедись, что fetch идет на правильный URL (относительный работает, если HTML отдает FastAPI)
         const res = await fetch('/generate', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -237,22 +235,25 @@ async function executeGeneration(email) {
                 variants: 1 
             })
         });
+        
         const data = await res.json();
-        if (data.error) {
-            if(data.error.includes("credits")) return togglePriceSheet(true);
+        
+        if (data.error === "credits_depleted") {
+            return togglePriceSheet(true);
+        } else if (data.error) {
             return alert(data.error);
         }
 
         renderResults(data.texts);
-        updateUI(email); // Обновляем счетчик кредитов в шапке
+        // Обновляем цифру кредитов на экране
+        document.getElementById('user-credits').innerText = data.remaining_credits + ' credits';
     } catch (e) {
-        alert("Connection error");
+        alert("Connection error to Python server");
     } finally {
         btn.innerText = "Brew Content";
         btn.disabled = false;
     }
 }
-
 function renderResults(texts) {
     let html = '';
     texts.forEach(text => {
@@ -308,13 +309,16 @@ function setV(k, v, el) {
     el.classList.add('active');
 }
 
-async function updateUI(email) {
+async function updateUI() {
     const { data: { user } } = await _supabase.auth.getUser();
     if (user) {
-        const { data: profile } = await _supabase.from('profiles').select('credits').eq('id', user.id).single();
+        // Опять же, берем данные из Python БД
+        const res = await fetch(`/get-credits?email=${user.email}`);
+        const data = await res.json();
+        
         document.getElementById('user-info').style.display = 'block';
         document.getElementById('display-email').innerText = user.email.split('@')[0];
-        document.getElementById('user-credits').innerText = (profile?.credits || 0) + ' credits';
+        document.getElementById('user-credits').innerText = data.credits + ' credits';
     }
 }
 
