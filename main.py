@@ -80,7 +80,7 @@ def get_credits(email: str, db: Session = Depends(get_db)):
 
 @app.post("/generate")
 async def generate(data: GenerateRequest, db: Session = Depends(get_db)):
-    # 1. Проверка юзера
+    # 1. Поиск или создание юзера в локальной БД (которую видит Python)
     user = db.query(User).filter(User.email == data.email).first()
     if not user:
         user = User(email=data.email, is_premium=False, credits=3)
@@ -88,11 +88,11 @@ async def generate(data: GenerateRequest, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(user)
     
-    # 2. Лимиты
+    # 2. Проверка лимитов
     if not user.is_premium and user.credits <= 0:
-        return {"error": "No credits left. Please upgrade."}
+        return {"error": "credits_depleted"}
 
-    # 3. Запрос к AI
+    # 3. Запрос к AI (используем data.variants, который теперь есть в модели)
     async with httpx.AsyncClient() as client:
         headers = {"Authorization": f"Bearer {GROQ_API_KEY}"}
         payload = {
@@ -102,19 +102,19 @@ async def generate(data: GenerateRequest, db: Session = Depends(get_db)):
             "temperature": 0.8
         }
         
-        responses = await asyncio.gather(*[
-            client.post(GROQ_URL, headers=headers, json=payload, timeout=15) 
-            for _ in range(data.variants)
-        ])
+        # Генерируем столько вариантов, сколько запрошено
+        tasks = [client.post(GROQ_URL, headers=headers, json=payload, timeout=15) for _ in range(data.variants)]
+        responses = await asyncio.gather(*tasks)
 
-        # 4. Списание кредитов
-        if not user.is_premium:
+        # 4. Списание кредитов (только если генерация удалась)
+        results = [res.json()["choices"][0]["message"]["content"].strip() for res in responses if res.status_code == 200]
+        
+        if results and not user.is_premium:
             user.credits -= 1
             db.commit()
+            db.refresh(user)
 
-        results = [res.json()["choices"][0]["message"]["content"].strip() for res in responses if res.status_code == 200]
         return {"texts": results, "remaining_credits": user.credits}
-
 @app.post("/create-checkout-session")
 async def create_checkout_session(data: CheckoutRequest):
     DOMAIN = "https://quickad-production.up.railway.app"
