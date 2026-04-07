@@ -61,10 +61,13 @@ def get_db():
         db.close()
 
 def build_prompt(data):
-    return (f"Write 1 Instagram caption for a cafe named '{data.cafe_name}'. "
+    # Добавляем условие для количества вариантов прямо в промпт
+    count = data.variants if data.variants > 1 else 1
+    return (f"Write {count} different Instagram captions for a cafe named '{data.cafe_name}'. "
             f"Language: {data.language}. Style: {data.mood}. Focus: {data.goal}. "
-            "Format: [Caption text] | [Photo idea]. Short, organic, max 1 emoji. "
-            "Example: Freshly brewed peace. | A close-up of steam rising from a ceramic mug.")
+            "Format each post strictly as: [Caption text] | [Photo idea]. "
+            "Separate each post with a unique marker '---'. "
+            "Short, organic, max 1 emoji per post.")
 
 # --- ENDPOINTS ---
 
@@ -80,39 +83,39 @@ def get_credits(email: str, db: Session = Depends(get_db)):
 
 @app.post("/generate")
 async def generate(data: GenerateRequest, db: Session = Depends(get_db)):
-    # 1. Поиск или создание юзера в локальной БД (которую видит Python)
     user = db.query(User).filter(User.email == data.email).first()
     if not user:
         user = User(email=data.email, is_premium=False, credits=3)
-        db.add(user)
-        db.commit()
-        db.refresh(user)
+        db.add(user); db.commit(); db.refresh(user)
     
-    # 2. Проверка лимитов
     if not user.is_premium and user.credits <= 0:
         return {"error": "credits_depleted"}
 
-    # 3. Запрос к AI (используем data.variants, который теперь есть в модели)
     async with httpx.AsyncClient() as client:
         headers = {"Authorization": f"Bearer {GROQ_API_KEY}"}
+        # Просим AI выдать всё за один раз — это быстрее и надежнее
         payload = {
             "model": "llama-3.3-70b-versatile",
             "messages": [{"role": "system", "content": build_prompt(data)},
-                         {"role": "user", "content": "Generate now."}],
+                         {"role": "user", "content": "Generate posts now."}],
             "temperature": 0.8
         }
         
-        # Генерируем столько вариантов, сколько запрошено
-        tasks = [client.post(GROQ_URL, headers=headers, json=payload, timeout=15) for _ in range(data.variants)]
-        responses = await asyncio.gather(*tasks)
-
-        # 4. Списание кредитов (только если генерация удалась)
-        results = [res.json()["choices"][0]["message"]["content"].strip() for res in responses if res.status_code == 200]
+        response = await client.post(GROQ_URL, headers=headers, json=payload, timeout=20)
         
-        if results and not user.is_premium:
-            user.credits -= 1
-            db.commit()
-            db.refresh(user)
+        if response.status_code != 200:
+            return {"error": "AI provider error"}
+
+        content = response.json()["choices"][0]["message"]["content"]
+        # Разделяем полученный текст на список постов
+        results = [text.strip() for text in content.split('---') if text.strip()]
+
+        if results:
+            # Списываем 1 кредит за запуск генерации (независимо от кол-ва постов, либо по твоей логике)
+            if not user.is_premium:
+                user.credits -= 1
+                db.commit()
+                db.refresh(user)
 
         return {"texts": results, "remaining_credits": user.credits}
 @app.post("/create-checkout-session")
