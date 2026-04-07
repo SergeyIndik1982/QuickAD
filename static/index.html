@@ -6,120 +6,47 @@
     <title>Cafe Caption</title>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@300;600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
+   <style>
         :root { --bg: #F8F5F2; --accent: #A39184; --text: #4A443F; --border: #E8E2DC; }
         body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
         .app { width: 100%; max-width: 420px; }
-        header {
-    display: flex;
-    align-items: center;    /* Центрирует лого и текст по вертикали */
-    justify-content: center; /* Центрирует всю группу по горизонтали */
-    gap: 12px;              /* Расстояние между логотипом и текстом */
-    margin-bottom: 25px;
-}
-
-.logo-img {
-    height: 42px;           /* Оптимальная высота под размер шрифта */
-    width: auto;
-    display: block;
-    /* Если у логотипа все еще белый фон, он сольется с белым фоном сайта */
-}
-
-header h1 {
-    margin: 0;
-    font-family: 'Fraunces', serif;
-    font-size: 1.8rem;
-    font-weight: 300;
-}
+        
+        header { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 25px; }
+        .logo-img { height: 42px; width: auto; display: block; }
+        header h1 { margin: 0; font-family: 'Fraunces', serif; font-size: 1.8rem; font-weight: 300; }
         header span { color: var(--accent); font-weight: 600; }
+
         .card { background: white; padding: 24px; border-radius: 24px; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.02); margin-bottom: 20px; }
         label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; color: #8C7B6F; display: block; margin-bottom: 10px; }
+        
         .lang-bar { display: flex; gap: 15px; overflow-x: auto; padding-bottom: 12px; border-bottom: 1px solid #F1EFEF; margin-bottom: 20px; }
         .lang { font-size: 11px; opacity: 0.4; cursor: pointer; font-weight: 600; }
         .lang.active { opacity: 1; color: var(--accent); border-bottom: 2px solid var(--accent); }
+        
         input { width: 100%; padding: 14px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 15px; font-family: inherit; font-size: 14px; box-sizing: border-box; outline: none; }
+        
         .segments { display: flex; background: #F1EFEF; padding: 4px; border-radius: 12px; margin-bottom: 20px; }
         .seg { flex: 1; text-align: center; padding: 10px; font-size: 11px; cursor: pointer; border-radius: 10px; color: #8E8883; font-weight: 600; }
         .seg.active { background: white; color: var(--text); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        
         button { width: 100%; padding: 18px; border-radius: 35px; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; }
         .btn-main { background: var(--accent); color: white; font-size: 17px; }
         .btn-premium { background: #4A443F; color: white; font-size: 15px; margin-top: 10px; border: 1px solid var(--accent); }
         .btn-sub { background: none; border: 1px solid var(--border); color: var(--accent); margin-top: 12px; font-size: 11px; text-transform: uppercase; }
-        .sheet { 
-            position: fixed; 
-            bottom: -100%; 
-            left: 0; 
-            right: 0; 
-            background: #F2F0ED; 
-            padding: 35px 20px 60px 20px; /* Увеличили нижний отступ (60px) */
-            border-radius: 30px 30px 0 0; 
-            transition: 0.5s; 
-            z-index: 1000; 
-            max-height: 80vh; 
-            overflow-y: auto; 
-        }
+
+        .sheet { position: fixed; bottom: -100%; left: 0; right: 0; background: #F2F0ED; padding: 35px 20px 60px 20px; border-radius: 30px 30px 0 0; transition: 0.5s; z-index: 1000; max-height: 80vh; overflow-y: auto; }
         .sheet.active { bottom: 0; }
-        .overlay { 
-            position: fixed; 
-            inset: 0; 
-            background: rgba(0,0,0,0.25); 
-            display: none; 
-            z-index: 999; 
-            backdrop-filter: blur(8px); 
-        }
-       .receipt { 
-            background: white; 
-            padding: 30px 25px; 
-            font-family: 'Courier New', monospace; 
-            margin-bottom: 20px; 
-            position: relative; 
-            white-space: pre-wrap; 
-            border-bottom: 2px dashed var(--border); 
-        }
-        .photo-tip { 
-            margin-top: 15px; 
-            font-size: 12px; 
-            color: #777; 
-            border-top: 1px dashed #eee; 
-            padding-top: 10px; 
-            font-style: italic; 
-            font-family: 'Inter', sans-serif; 
-        }
-        .actions { 
-            display: flex; 
-            gap: 10px;  
-            margin-top: 20px; 
-        }
-        .action-btn {
-            flex: 1;
-            padding: 14px;
-            border-radius: 14px;
-            font-size: 12px;
-            font-weight: 600;
-            font-family: 'Inter', sans-serif;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            cursor: pointer;
-            border: none;
-            transition: 0.2s;
-        }
+        
+        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.25); display: none; z-index: 999; backdrop-filter: blur(8px); }
+
+        .receipt { background: white; padding: 30px 25px; font-family: 'Courier New', monospace; margin-bottom: 20px; position: relative; white-space: pre-wrap; border-bottom: 2px dashed var(--border); }
+        .photo-tip { margin-top: 15px; font-size: 12px; color: #777; border-top: 1px dashed #eee; padding-top: 10px; font-style: italic; font-family: 'Inter', sans-serif; }
+        
+        .actions { display: flex; gap: 10px; margin-top: 20px; }
+        .action-btn { flex: 1; padding: 14px; border-radius: 14px; font-size: 12px; font-weight: 600; font-family: 'Inter', sans-serif; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; border: none; transition: 0.2s; }
         .action-btn:active { transform: scale(0.96); }
         .btn-copy { background: #F1EFEF; color: var(--text); }
-        .btn-instagram { 
-            background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); 
-            color: white; 
-            text-decoration: none; 
-        }
-        .overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.25);
-            display: none;
-            z-index: 999;
-            backdrop-filter: blur(8px);
-        }
+        .btn-instagram { background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); color: white; text-decoration: none; }
     </style>
     
 </head>
