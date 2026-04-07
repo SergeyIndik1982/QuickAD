@@ -97,7 +97,28 @@
             <div class="seg" onclick="setV('goal','People',this)">People</div>
             <div class="seg" onclick="setV('goal','Daily',this)">Daily</div>
         </div>
+        <div style="text-align: center; margin-bottom: 15px;">
+    <span onclick="document.getElementById('adv-settings').style.display = (document.getElementById('adv-settings').style.display === 'none' ? 'block' : 'none')" 
+          style="font-size: 11px; color: var(--accent); cursor: pointer; border-bottom: 1px dashed var(--accent);">
+        ⚙️ Advanced Settings
+    </span>
+</div>
 
+<div id="adv-settings" style="display: none; margin-bottom: 20px; padding: 15px; background: #f9f9f9; border-radius: 12px;">
+    <label>Weather</label>
+    <div class="segments">
+        <div class="seg active" onclick="setV('weather','Random',this)">Auto</div>
+        <div class="seg" onclick="setV('weather','Sunny',this)">Sunny</div>
+        <div class="seg" onclick="setV('weather','Rainy',this)">Rainy</div>
+    </div>
+
+    <label>Time of Day</label>
+    <div class="segments">
+        <div class="seg active" onclick="setV('time','Random',this)">Auto</div>
+        <div class="seg" onclick="setV('time','Morning',this)">Morning</div>
+        <div class="seg" onclick="setV('time','Evening',this)">Evening</div>
+    </div>
+</div>
         <button class="btn-main" id="go" onclick="brew()">Brew Content</button>
         <button class="btn-premium" id="go-week" onclick="brewWeek()">✨ Week Generator (7 Posts)</button>
     </div>
