@@ -47,6 +47,8 @@ class GenerateRequest(BaseModel):
     mood: str
     goal: str
     target: str
+    weather: str = "Random"
+    time: str = "Random"
     variants: int = 1
   
 
@@ -76,7 +78,15 @@ def build_prompt(data):
     }
 
     trigger = audience_triggers.get(target, audience_triggers["General"])
+    weather_context = f"Weather: {data.weather}." if data.weather != "Random" else "Weather: Surprise me (vary it for each post)."
+    time_context = f"Time of Day: {data.time}." if data.time != "Random" else "Time of Day: Surprise me (vary it for each post)."
 
+    prompt = (
+        f"Role: Expert Social Media Manager for '{data.cafe_name}'.\n"
+        f"Audience: {data.target}. Mood: {data.mood}. Focus: {data.goal}.\n"
+        f"{weather_context} {time_context}\n\n"
+        "Instructions: Create posts where the atmosphere perfectly matches the weather and time. "
+        "If 'Random' is selected, ensure a diverse mix (e.g., one sunny morning, one rainy night)."
     # Формируем мощный промпт
     prompt = (
         f"Act as a world-class Social Media Strategist for '{data.cafe_name}'.\n"
