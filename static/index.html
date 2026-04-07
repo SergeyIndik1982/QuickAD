@@ -63,13 +63,7 @@
     </div>
 
     <div class="card">
-        <div class="lang-bar">
-            <div class="lang active" onclick="setL('English', this)">EN</div>
-            <div class="lang" onclick="setL('German', this)">DE</div>
-            <div class="lang" onclick="setL('French', this)">FR</div>
-            <div class="lang" onclick="setL('Italian', this)">IT</div>
-            <div class="lang" onclick="setL('Russian', this)">RU</div>
-        </div>
+        
 
         <label>Cafe Name</label>
         <input type="text" id="name" placeholder="Name of your space..." oninput="localStorage.setItem('name', this.value)">
@@ -105,6 +99,14 @@
 </div>
 
 <div id="adv-settings" style="display: none; margin-bottom: 20px; padding: 15px; background: #f9f9f9; border-radius: 12px;">
+   <label>Language</label>
+        <div class="segments" style="margin-bottom: 15px;">
+            <div class="seg active" onclick="setV('lang','English',this)">EN</div>
+            <div class="seg" onclick="setV('lang','German',this)">DE</div>
+            <div class="seg" onclick="setV('lang','French',this)">FR</div>
+            <div class="seg" onclick="setV('lang','Italian',this)">IT</div>
+            <div class="seg" onclick="setV('lang','Russian',this)">RU</div>
+        </div>
     <label>Weather</label>
     <div class="segments">
         <div class="seg active" onclick="setV('weather','Random',this)">Auto</div>
