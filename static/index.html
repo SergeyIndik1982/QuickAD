@@ -329,6 +329,39 @@ window.onload = async () => {
             brew();
         }
     }
+    async function brewWeek() {
+    const { data: { user } } = await _supabase.auth.getUser();
+    if (!user) return loginWithGoogle();
+
+    const nameInput = document.getElementById('name');
+    const btn = document.getElementById('go-week');
+    btn.innerText = "Roasting...";
+    btn.disabled = true;
+
+    try {
+        const res = await fetch('/generate', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                email: user.email,
+                cafe_name: nameInput.value,
+                language: state.lang,
+                mood: state.mood,
+                goal: state.goal,
+                variants: 7 
+            })
+        });
+        const data = await res.json();
+        if (data.error === "credits_depleted") return togglePriceSheet(true);
+        renderResults(data.texts);
+        document.getElementById('user-credits').innerText = data.remaining_credits + ' credits';
+    } catch (e) {
+        alert("Error brewing week");
+    } finally {
+        btn.innerText = "✨ Week Generator (7 Posts)";
+        btn.disabled = false;
+    }
+}
 };
 </script>
 </body>
