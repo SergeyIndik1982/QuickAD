@@ -46,6 +46,7 @@ class GenerateRequest(BaseModel):
     language: str
     mood: str
     goal: str
+    target: str
     variants: int = 1
   
 
@@ -61,14 +62,36 @@ def get_db():
         db.close()
 
 def build_prompt(data):
-    # Добавляем условие для количества вариантов прямо в промпт
+    # Получаем аудиторию из данных запроса (нужно добавить поле в GenerateRequest)
+    target = getattr(data, 'target', 'General') 
     count = data.variants if data.variants > 1 else 1
-    return (f"Write {count} different Instagram captions for a cafe named '{data.cafe_name}'. "
-            f"Language: {data.language}. Style: {data.mood}. Focus: {data.goal}. "
-            "Format each post strictly as: [Caption text] | [Photo idea]. "
-            "Separate each post with a unique marker '---'. "
-            "Short, organic, max 1 emoji per post.")
+    
+    # Специфические триггеры для каждой группы
+    audience_triggers = {
+        "Freelancers": "Focus on high-speed Wi-Fi, power outlets, productivity, and the perfect 'flow' state with coffee.",
+        "Couples": "Focus on romantic lighting, cozy corners, shared desserts, and intimate conversations.",
+        "Coffee Geeks": "Focus on bean origin, roast profiles, brewing methods (V60, Aeropress), and sensory notes.",
+        "Families": "Focus on spacious tables, kid-friendly treats, warm service, and a welcoming environment for all ages.",
+        "General": "Focus on high-quality service and a welcoming atmosphere."
+    }
 
+    trigger = audience_triggers.get(target, audience_triggers["General"])
+
+    # Формируем мощный промпт
+    prompt = (
+        f"Act as a world-class Social Media Strategist for '{data.cafe_name}'.\n"
+        f"Language: {data.language}. Tone: {data.mood}. Focus: {data.goal}.\n"
+        f"Target Audience: {target}. {trigger}\n\n"
+        f"Task: Write {count} unique Instagram posts. For each post, randomly assign a different 'Time of Day' "
+        f"(early morning, golden hour, rainy evening) and 'Weather' to create a dynamic feed.\n\n"
+        "STRICT RULES:\n"
+        "- Format: [Caption text] | [Detailed Photo script: subject, lighting, angle].\n"
+        "- Captions: 2-4 sentences. Competitive, punchy, avoiding clichés like 'Welcome'.\n"
+        "- Photo script: Describe a scene that visually tells the story of the caption.\n"
+        "- Separator: Use '---' between posts.\n"
+        "- Emoji: Max 1-2 per post."
+    )
+    return prompt
 # --- ENDPOINTS ---
 
 @app.get("/get-credits")
