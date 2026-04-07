@@ -300,7 +300,6 @@ function setV(k, v, el) {
 async function updateUI() {
     const { data: { user } } = await _supabase.auth.getUser();
     if (user) {
-        // Опять же, берем данные из Python БД
         const res = await fetch(`/get-credits?email=${user.email}`);
         const data = await res.json();
         
@@ -318,20 +317,22 @@ function buy(plan) {
     window.location.href = links[plan];
 }
 
+// Запуск при загрузке
 window.onload = async () => {
     document.getElementById('name').value = localStorage.getItem('name') || '';
     
     const { data: { user } } = await _supabase.auth.getUser();
     if (user) {
-        updateUI(user.email);
-        // Проверяем, нужно ли доварить контент
+        updateUI();
         if (localStorage.getItem('auto_brew') === 'true') {
             localStorage.removeItem('auto_brew');
             brew();
         }
     }
-   } 
-    async function brewWeek() {
+};
+
+// Функция недели ДОЛЖНА быть тут (снаружи onload)
+async function brewWeek() {
     const { data: { user } } = await _supabase.auth.getUser();
     if (!user) return loginWithGoogle();
 
@@ -363,7 +364,5 @@ window.onload = async () => {
         btn.innerText = "✨ Week Generator (7 Posts)";
         btn.disabled = false;
     }
-};
-</script>
-</body>
-</html>
+}
+</script>tml>
