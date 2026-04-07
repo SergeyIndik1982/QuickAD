@@ -122,7 +122,7 @@
 <script>
 const _supabase = supabase.createClient('https://fhfxpwgqnwnlafekmmrm.supabase.co', 'sb_publishable_0pLQ3vw_4N55UL-XCiytmA_Jl0HkYEh');
 
-let state = { lang: 'English', mood: 'Poetic', goal: 'Atmosphere', target: 'Freelancer' };
+let state = { lang: 'English', mood: 'Poetic', goal: 'Atmosphere', target: 'Freelancers' };
 
 async function brew() {
     const { data: { user } } = await _supabase.auth.getUser();
@@ -169,6 +169,7 @@ async function executeGeneration(email) {
                 cafe_name: nameInput.value,
                 language: state.lang,
                 mood: state.mood,
+                target: state.target,
                 goal: state.goal,
                 variants: 1 
             })
