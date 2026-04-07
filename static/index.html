@@ -67,63 +67,61 @@ header h1 {
             z-index: 999; 
             backdrop-filter: blur(8px); 
         }
-        .receipt { background: white; padding: 30px 25px; font-family: 'Courier New', monospace; margin-bottom: 20px; position: relative; white-space: pre-wrap; border-bottom: 2px dashed var(--border); }
-        .photo-tip { margin-top: 15px; font-size: 12px; color: #777; border-top: 1px dashed #eee; padding-top: 10px; font-style: italic; font-family: 'Inter', sans-serif; }
-        .copy-btn { position: absolute; top: 10px; right: 10px; background: #F8F5F2; border: 1px solid #eee; font-size: 9px; padding: 5px; cursor: pointer; }
-.ig-btn { 
-    display: flex; align-items: center; justify-content: center;
-    width: 100%; margin-top: 20px; padding: 12px; 
-    background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
-    color: white; text-decoration: none; border-radius: 12px; 
-    font-size: 13px; font-weight: 600; font-family: 'Inter', sans-serif;
-} 
-/* Контейнер для кнопок внизу чека */
-.actions { 
-    display: flex; 
-    gap: 10px;  
-    margin-top: 20px; 
-}
-
-/* Общий стиль для новых кнопок действий */
-.action-btn {
-    flex: 1;
-    padding: 14px;
-    border-radius: 14px;
-    font-size: 12px;
-    font-weight: 600;
-    font-family: 'Inter', sans-serif;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    cursor: pointer;
-    border: none;
-    transition: transform 0.1s ease;
-}
-
-.action-btn:active { transform: scale(0.96); }
-
-/* Кнопка Копирования */
-.btn-copy {
-    background: #F1EFEF;
-    color: var(--text);
-}
-
-/* Кнопка Инстаграм */
-.btn-instagram {
-    background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
-    color: white;
-    text-decoration: none;
-}
-
-/* Скрываем старую версию кнопки copy-btn, если она осталась в HTML */
-.copy-btn { display: none; }
-}    
-
-.overlay {
-    backdrop-filter: blur(8px); /* Красивое размытие фона при открытии тарифов */
-}       
+       .receipt { 
+            background: white; 
+            padding: 30px 25px; 
+            font-family: 'Courier New', monospace; 
+            margin-bottom: 20px; 
+            position: relative; 
+            white-space: pre-wrap; 
+            border-bottom: 2px dashed var(--border); 
+        }
+        .photo-tip { 
+            margin-top: 15px; 
+            font-size: 12px; 
+            color: #777; 
+            border-top: 1px dashed #eee; 
+            padding-top: 10px; 
+            font-style: italic; 
+            font-family: 'Inter', sans-serif; 
+        }
+        .actions { 
+            display: flex; 
+            gap: 10px;  
+            margin-top: 20px; 
+        }
+        .action-btn {
+            flex: 1;
+            padding: 14px;
+            border-radius: 14px;
+            font-size: 12px;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer;
+            border: none;
+            transition: 0.2s;
+        }
+        .action-btn:active { transform: scale(0.96); }
+        .btn-copy { background: #F1EFEF; color: var(--text); }
+        .btn-instagram { 
+            background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); 
+            color: white; 
+            text-decoration: none; 
+        }
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.25);
+            display: none;
+            z-index: 999;
+            backdrop-filter: blur(8px);
+        }
     </style>
+    
 </head>
 <body>
 
