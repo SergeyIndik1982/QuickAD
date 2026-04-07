@@ -145,7 +145,8 @@
 <script>
 const _supabase = supabase.createClient('https://fhfxpwgqnwnlafekmmrm.supabase.co', 'sb_publishable_0pLQ3vw_4N55UL-XCiytmA_Jl0HkYEh');
 
-let state = { lang: 'English', mood: 'Poetic', goal: 'Atmosphere', target: 'Freelancers' };
+let state = { lang: 'English', mood: 'Poetic', goal: 'Atmosphere', target: 'Freelancers'weather: 'Random',
+    time: 'Random' };
 
 async function brew() {
     const { data: { user } } = await _supabase.auth.getUser();
@@ -249,6 +250,13 @@ function copyText(btn) {
 function toggleSheet(show) {
     document.getElementById('resultSheet').classList.toggle('active', show);
     document.getElementById('blur').style.display = show ? 'block' : 'none';
+}
+
+function toggleAdvanced() {
+    const panel = document.getElementById('adv-settings');
+    const isHidden = panel.style.display === 'none';
+    panel.style.display = isHidden ? 'block' : 'none';
+    document.getElementById('adv-toggle').innerText = isHidden ? '🔼 Close Settings' : '⚙️ Advanced Settings';
 }
 
 function togglePriceSheet(show) {
