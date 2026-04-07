@@ -330,6 +330,7 @@ window.onload = async () => {
             brew();
         }
     }
+   } 
     async function brewWeek() {
     const { data: { user } } = await _supabase.auth.getUser();
     if (!user) return loginWithGoogle();
@@ -362,7 +363,6 @@ window.onload = async () => {
         btn.innerText = "✨ Week Generator (7 Posts)";
         btn.disabled = false;
     }
-}
 };
 </script>
 </body>
