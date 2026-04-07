@@ -81,6 +81,13 @@
             <div class="seg" onclick="setV('mood','Witty',this)">Witty</div>
         </div>
 
+        <label>Target Audience</label>
+    <div class="segments" id="target-segments">
+    <div class="seg active" onclick="setV('target','Freelancers',this)">💻 Pros</div>
+    <div class="seg" onclick="setV('target','Couples',this)">👩‍❤️‍👨 Date</div>
+    <div class="seg" onclick="setV('target','Coffee Geeks',this)">☕️ Geeks</div>
+    <div class="seg" onclick="setV('target','Families',this)">🧸 Family</div>
+     </div>
        
         <label>Focus</label>
         <div class="segments">
@@ -115,7 +122,7 @@
 <script>
 const _supabase = supabase.createClient('https://fhfxpwgqnwnlafekmmrm.supabase.co', 'sb_publishable_0pLQ3vw_4N55UL-XCiytmA_Jl0HkYEh');
 
-let state = { lang: 'English', mood: 'Poetic', goal: 'Atmosphere' };
+let state = { lang: 'English', mood: 'Poetic', goal: 'Atmosphere', target: 'Freelancer' };
 
 async function brew() {
     const { data: { user } } = await _supabase.auth.getUser();
