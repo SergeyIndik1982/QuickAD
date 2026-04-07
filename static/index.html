@@ -252,12 +252,21 @@ async function updateUI() {
     }
 }
 
-function buy(plan) {
-    const links = {
-        'single': 'https://buy.stripe.com/test_50credits',
-        'monthly': 'https://buy.stripe.com/test_unlimited'
-    };
-    window.location.href = links[plan];
+async function buy(plan) {
+    const { data: { user } } = await _supabase.auth.getUser();
+    if (!user) return loginWithGoogle();
+
+    const res = await fetch('/create-checkout-session', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ email: user.email, plan: plan })
+    });
+    const session = await res.json();
+    if (session.url) {
+        window.location.href = session.url; // Перенаправляем на динамическую сессию
+    } else {
+        alert("Payment error: " + session.error);
+    }
 }
 
 // Запуск при загрузке
