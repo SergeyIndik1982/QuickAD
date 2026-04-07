@@ -46,6 +46,7 @@ header h1 {
         .btn-premium { background: #4A443F; color: white; font-size: 15px; margin-top: 10px; border: 1px solid var(--accent); }
         .btn-sub { background: none; border: 1px solid var(--border); color: var(--accent); margin-top: 12px; font-size: 11px; text-transform: uppercase; }
         .sheet { position: fixed; bottom: -100%; left: 0; right: 0; background: #F2F0ED; padding: 35px 20px; border-radius: 30px 30px 0 0; transition: 0.5s; z-index: 1000; max-height: 80vh; overflow-y: auto; }
+        #priceSheet {z-index: 1100; /* Чтобы тарифы были поверх результатов, если вылезут вместе */}
         .sheet.active { bottom: 0; }
         .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.25); display: none; z-index: 999; backdrop-filter: blur(4px); }
         .receipt { background: white; padding: 30px 25px; font-family: 'Courier New', monospace; margin-bottom: 20px; position: relative; white-space: pre-wrap; border-bottom: 2px dashed var(--border); }
