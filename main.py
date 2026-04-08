@@ -87,6 +87,7 @@ def build_prompt(data):
         f"{weather_context} {time_context}\n\n"
         "Instructions: Create posts where the atmosphere perfectly matches the weather and time. "
         "If 'Random' is selected, ensure a diverse mix (e.g., one sunny morning, one rainy night)."
+    ) 
     # Формируем мощный промпт
     prompt = (
         f"Act as a world-class Social Media Strategist for '{data.cafe_name}'.\n"
