@@ -50,7 +50,6 @@ class GenerateRequest(BaseModel):
     weather: str = "Random"
     time: str = "Random"
     variants: int = 1
-  
 
 class CheckoutRequest(BaseModel):
     email: str
@@ -64,45 +63,39 @@ def get_db():
         db.close()
 
 def build_prompt(data):
-    # Получаем аудиторию из данных запроса (нужно добавить поле в GenerateRequest)
-    target = getattr(data, 'target', 'General') 
+    target = getattr(data, 'target', 'General')
     count = data.variants if data.variants > 1 else 1
     
-    # Специфические триггеры для каждой группы
     audience_triggers = {
-        "Freelancers": "Focus on high-speed Wi-Fi, power outlets, productivity, and the perfect 'flow' state with coffee.",
+        "Freelancers": "Focus on high-speed Wi-Fi, power outlets, productivity, and the perfect 'flow' state.",
         "Couples": "Focus on romantic lighting, cozy corners, shared desserts, and intimate conversations.",
         "Coffee Geeks": "Focus on bean origin, roast profiles, brewing methods (V60, Aeropress), and sensory notes.",
-        "Families": "Focus on spacious tables, kid-friendly treats, warm service, and a welcoming environment for all ages.",
+        "Families": "Focus on spacious tables, kid-friendly treats, warm service, and a welcoming environment.",
         "General": "Focus on high-quality service and a welcoming atmosphere."
     }
 
     trigger = audience_triggers.get(target, audience_triggers["General"])
-    weather_context = f"Weather: {data.weather}." if data.weather != "Random" else "Weather: Surprise me (vary it for each post)."
-    time_context = f"Time of Day: {data.time}." if data.time != "Random" else "Time of Day: Surprise me (vary it for each post)."
+    
+    # Умная логика погоды и времени
+    weather_ctx = f"Weather: {data.weather}." if data.weather != "Random" else "Weather: Surprise me (vary it for each post if multiple)."
+    time_ctx = f"Time of Day: {data.time}." if data.time != "Random" else "Time of Day: Surprise me (vary it for each post if multiple)."
 
-    prompt = (
-        f"Role: Expert Social Media Manager for '{data.cafe_name}'.\n"
-        f"Audience: {data.target}. Mood: {data.mood}. Focus: {data.goal}.\n"
-        f"{weather_context} {time_context}\n\n"
-        "Instructions: Create posts where the atmosphere perfectly matches the weather and time. "
-        "If 'Random' is selected, ensure a diverse mix (e.g., one sunny morning, one rainy night)."
-    ) 
-    # Формируем мощный промпт
+    # ФИНАЛЬНЫЙ СБОРНЫЙ ПРОМПТ (БЕЗ ПЕРЕЗАПИСИ)
     prompt = (
         f"Act as a world-class Social Media Strategist for '{data.cafe_name}'.\n"
         f"Language: {data.language}. Tone: {data.mood}. Focus: {data.goal}.\n"
-        f"Target Audience: {target}. {trigger}\n\n"
-        f"Task: Write {count} unique Instagram posts. For each post, randomly assign a different 'Time of Day' "
-        f"(early morning, golden hour, rainy evening) and 'Weather' to create a dynamic feed.\n\n"
+        f"Target Audience: {target}. {trigger}\n"
+        f"{weather_ctx} {time_ctx}\n\n"
+        f"Task: Write {count} unique Instagram posts. The atmosphere MUST match the weather and time context.\n\n"
         "STRICT RULES:\n"
         "- Format: [Caption text] | [Detailed Photo script: subject, lighting, angle].\n"
-        "- Captions: 2-4 sentences. Competitive, punchy, avoiding clichés like 'Welcome'.\n"
+        "- Captions: 2-4 sentences. Competitive, punchy, avoiding clichés.\n"
         "- Photo script: Describe a scene that visually tells the story of the caption.\n"
         "- Separator: Use '---' between posts.\n"
         "- Emoji: Max 1-2 per post."
     )
     return prompt
+
 # --- ENDPOINTS ---
 
 @app.get("/get-credits")
@@ -110,9 +103,7 @@ def get_credits(email: str, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == email).first()
     if not user:
         user = User(email=email, credits=3, is_premium=False)
-        db.add(user)
-        db.commit()
-        db.refresh(user)
+        db.add(user); db.commit(); db.refresh(user)
     return {"credits": user.credits, "is_premium": user.is_premium}
 
 @app.post("/generate")
@@ -127,31 +118,33 @@ async def generate(data: GenerateRequest, db: Session = Depends(get_db)):
 
     async with httpx.AsyncClient() as client:
         headers = {"Authorization": f"Bearer {GROQ_API_KEY}"}
-        # Просим AI выдать всё за один раз — это быстрее и надежнее
         payload = {
             "model": "llama-3.3-70b-versatile",
-            "messages": [{"role": "system", "content": build_prompt(data)},
-                         {"role": "user", "content": "Generate posts now."}],
+            "messages": [
+                {"role": "system", "content": build_prompt(data)},
+                {"role": "user", "content": "Generate content now."}
+            ],
             "temperature": 0.8
         }
         
-        response = await client.post(GROQ_URL, headers=headers, json=payload, timeout=20)
-        
-        if response.status_code != 200:
-            return {"error": "AI provider error"}
+        try:
+            response = await client.post(GROQ_URL, headers=headers, json=payload, timeout=30)
+            if response.status_code != 200:
+                return {"error": f"Groq Error: {response.text}"}
+            
+            content = response.json()["choices"][0]["message"]["content"]
+            results = [text.strip() for text in content.split('---') if text.strip()]
 
-        content = response.json()["choices"][0]["message"]["content"]
-        # Разделяем полученный текст на список постов
-        results = [text.strip() for text in content.split('---') if text.strip()]
+            if results:
+                if not user.is_premium:
+                    user.credits -= 1
+                    db.commit()
+                return {"texts": results, "remaining_credits": user.credits}
+            
+            return {"error": "Failed to parse AI response"}
+        except Exception as e:
+            return {"error": str(e)}
 
-        if results:
-            # Списываем 1 кредит за запуск генерации (независимо от кол-ва постов, либо по твоей логике)
-            if not user.is_premium:
-                user.credits -= 1
-                db.commit()
-                db.refresh(user)
-
-        return {"texts": results, "remaining_credits": user.credits}
 @app.post("/create-checkout-session")
 async def create_checkout_session(data: CheckoutRequest):
     DOMAIN = "https://quickad-production.up.railway.app"
