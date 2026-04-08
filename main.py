@@ -1,5 +1,5 @@
 import os
-import httpx 
+import httpx
 import stripe
 import asyncio
 from fastapi import FastAPI, Request, Header, HTTPException, Depends
