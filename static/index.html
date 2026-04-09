@@ -145,8 +145,15 @@
 <script>
 const _supabase = supabase.createClient('https://fhfxpwgqnwnlafekmmrm.supabase.co', 'sb_publishable_0pLQ3vw_4N55UL-XCiytmA_Jl0HkYEh');
 
-let state = { lang: 'English', mood: 'Poetic', goal: 'Atmosphere', target: 'Freelancers', weather: 'Random',
-    time: 'Random' };
+// ИСПРАВЛЕНО: Добавлены запятые в объекте state
+let state = { 
+    lang: 'English', 
+    mood: 'Poetic', 
+    goal: 'Atmosphere', 
+    target: 'Freelancers',
+    weather: 'Random',
+    time: 'Random' 
+};
 
 async function brew() {
     const { data: { user } } = await _supabase.auth.getUser();
@@ -157,7 +164,6 @@ async function brew() {
         return loginWithGoogle();
     }
 
-    // ВАЖНО: Запрашиваем кредиты у НАШЕГО сервера, а не у Supabase напрямую
     try {
         const res = await fetch(`/get-credits?email=${user.email}`);
         const profile = await res.json();
@@ -170,6 +176,7 @@ async function brew() {
         console.error("Auth check failed", e);
     }
 }
+
 async function loginWithGoogle() {
     await _supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -184,7 +191,6 @@ async function executeGeneration(email) {
     btn.disabled = true;
 
     try {
-        // Убедись, что fetch идет на правильный URL (относительный работает, если HTML отдает FastAPI)
         const res = await fetch('/generate', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -195,8 +201,8 @@ async function executeGeneration(email) {
                 mood: state.mood,
                 target: state.target,
                 goal: state.goal,
-                weather: 'Random', 
-                time: 'Random'
+                weather: state.weather, // ИСПРАВЛЕНО: берем из state
+                time: state.time,       // ИСПРАВЛЕНО: добавлена запятая
                 variants: 1 
             })
         });
@@ -210,8 +216,9 @@ async function executeGeneration(email) {
         }
 
         renderResults(data.texts);
-        // Обновляем цифру кредитов на экране
-        document.getElementById('user-credits').innerText = data.remaining_credits + ' credits';
+        if (data.remaining_credits !== undefined) {
+            document.getElementById('user-credits').innerText = data.remaining_credits + ' credits';
+        }
     } catch (e) {
         alert("Connection error to Python server");
     } finally {
@@ -219,6 +226,7 @@ async function executeGeneration(email) {
         btn.disabled = false;
     }
 }
+
 function renderResults(texts) {
     let html = '';
     texts.forEach(text => {
@@ -239,7 +247,6 @@ function renderResults(texts) {
     toggleSheet(true);
 }
 
-// Утилиты
 function copyText(btn) {
     const text = btn.closest('.receipt').querySelector('.content-to-copy').innerText;
     navigator.clipboard.writeText(text);
@@ -252,13 +259,6 @@ function toggleSheet(show) {
     document.getElementById('blur').style.display = show ? 'block' : 'none';
 }
 
-function toggleAdvanced() {
-    const panel = document.getElementById('adv-settings');
-    const isHidden = panel.style.display === 'none';
-    panel.style.display = isHidden ? 'block' : 'none';
-    document.getElementById('adv-toggle').innerText = isHidden ? '🔼 Close Settings' : '⚙️ Advanced Settings';
-}
-
 function togglePriceSheet(show) {
     document.getElementById('priceSheet').classList.toggle('active', show);
     document.getElementById('blur').style.display = show ? 'block' : 'none';
@@ -267,12 +267,6 @@ function togglePriceSheet(show) {
 function toggleAll() {
     toggleSheet(false);
     togglePriceSheet(false);
-}
-
-function setL(l, el) {
-    state.lang = l;
-    document.querySelectorAll('.lang').forEach(x => x.classList.remove('active'));
-    el.classList.add('active');
 }
 
 function setV(k, v, el) {
@@ -284,12 +278,13 @@ function setV(k, v, el) {
 async function updateUI() {
     const { data: { user } } = await _supabase.auth.getUser();
     if (user) {
-        const res = await fetch(`/get-credits?email=${user.email}`);
-        const data = await res.json();
-        
-        document.getElementById('user-info').style.display = 'block';
-        document.getElementById('display-email').innerText = user.email.split('@')[0];
-        document.getElementById('user-credits').innerText = data.credits + ' credits';
+        try {
+            const res = await fetch(`/get-credits?email=${user.email}`);
+            const data = await res.json();
+            document.getElementById('user-info').style.display = 'block';
+            document.getElementById('display-email').innerText = user.email.split('@')[0];
+            document.getElementById('user-credits').innerText = data.credits + ' credits';
+        } catch(e) {}
     }
 }
 
@@ -304,16 +299,14 @@ async function buy(plan) {
     });
     const session = await res.json();
     if (session.url) {
-        window.location.href = session.url; // Перенаправляем на динамическую сессию
+        window.location.href = session.url;
     } else {
         alert("Payment error: " + session.error);
     }
 }
 
-// Запуск при загрузке
 window.onload = async () => {
     document.getElementById('name').value = localStorage.getItem('name') || '';
-    
     const { data: { user } } = await _supabase.auth.getUser();
     if (user) {
         updateUI();
@@ -324,7 +317,6 @@ window.onload = async () => {
     }
 };
 
-// Функция недели ДОЛЖНА быть тут (снаружи onload)
 async function brewWeek() {
     const { data: { user } } = await _supabase.auth.getUser();
     if (!user) return loginWithGoogle();
@@ -346,14 +338,16 @@ async function brewWeek() {
                 target: state.target,
                 goal: state.goal,
                 weather: state.weather,
-                time: state.time
+                time: state.time, // ИСПРАВЛЕНО: добавлена запятая
                 variants: 7 
             })
         });
         const data = await res.json();
         if (data.error === "credits_depleted") return togglePriceSheet(true);
         renderResults(data.texts);
-        document.getElementById('user-credits').innerText = data.remaining_credits + ' credits';
+        if (data.remaining_credits !== undefined) {
+            document.getElementById('user-credits').innerText = data.remaining_credits + ' credits';
+        }
     } catch (e) {
         alert("Error brewing week");
     } finally {
