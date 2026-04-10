@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Cafe Caption</title>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@300;600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
-   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-   <style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
         :root { --bg: #F8F5F2; --accent: #A39184; --text: #4A443F; --border: #E8E2DC; }
         body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
         .app { width: 100%; max-width: 420px; }
@@ -19,28 +19,30 @@
         .card { background: white; padding: 24px; border-radius: 24px; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.02); margin-bottom: 20px; }
         label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; color: #8C7B6F; display: block; margin-bottom: 10px; }
         
-        input { width: 100%; padding: 14px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 15px; font-family: inherit; font-size: 14px; box-sizing: border-box; outline: none; }
+        input { width: 100%; padding: 14px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 15px; font-family: inherit; font-size: 14px; box-sizing: border-box; outline: none; transition: 0.2s; }
+        input:focus { border-color: var(--accent); }
         
         .segments { display: flex; background: #F1EFEF; padding: 4px; border-radius: 12px; margin-bottom: 20px; flex-wrap: wrap; gap: 4px; }
-        .seg { flex: 1; min-width: 70px; text-align: center; padding: 10px; font-size: 11px; cursor: pointer; border-radius: 10px; color: #8E8883; font-weight: 600; transition: 0.2s; }
+        .seg { flex: 1; min-width: 80px; text-align: center; padding: 10px; font-size: 11px; cursor: pointer; border-radius: 10px; color: #8E8883; font-weight: 600; transition: 0.2s; }
         .seg.active { background: white; color: var(--text); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         
         button { width: 100%; padding: 18px; border-radius: 35px; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; }
         .btn-main { background: var(--accent); color: white; font-size: 17px; margin-bottom: 10px; }
+        .btn-main:disabled { opacity: 0.6; cursor: not-allowed; }
         .btn-premium { background: #4A443F; color: white; font-size: 15px; border: 1px solid var(--accent); }
         .btn-sub { background: none; border: 1px solid var(--border); color: var(--accent); margin-top: 12px; font-size: 11px; text-transform: uppercase; }
 
-        .sheet { position: fixed; bottom: -100%; left: 0; right: 0; background: #F2F0ED; padding: 35px 20px 60px 20px; border-radius: 30px 30px 0 0; transition: 0.5s; z-index: 1000; max-height: 80vh; overflow-y: auto; }
+        .sheet { position: fixed; bottom: -100%; left: 0; right: 0; background: #F2F0ED; padding: 35px 20px 60px 20px; border-radius: 30px 30px 0 0; transition: 0.5s; z-index: 1000; max-height: 85vh; overflow-y: auto; }
         .sheet.active { bottom: 0; }
         .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.25); display: none; z-index: 999; backdrop-filter: blur(8px); }
 
-        .receipt { background: white; padding: 30px 25px; font-family: 'Courier New', monospace; margin-bottom: 20px; position: relative; white-space: pre-wrap; border-bottom: 2px dashed var(--border); }
+        .receipt { background: white; padding: 30px 25px; font-family: 'Courier New', monospace; margin-bottom: 20px; position: relative; white-space: pre-wrap; border-bottom: 2px dashed var(--border); box-shadow: 0 4px 10px rgba(0,0,0,0.03); }
         .photo-tip { margin-top: 15px; font-size: 12px; color: #777; border-top: 1px dashed #eee; padding-top: 10px; font-style: italic; font-family: 'Inter', sans-serif; }
         
         .actions { display: flex; gap: 10px; margin-top: 20px; }
-        .action-btn { flex: 1; padding: 14px; border-radius: 14px; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; border: none; }
+        .action-btn { flex: 1; padding: 14px; border-radius: 14px; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; border: none; text-decoration: none; }
         .btn-copy { background: #F1EFEF; color: var(--text); }
-        .btn-instagram { background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); color: white; text-decoration: none; }
+        .btn-instagram { background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); color: white; }
     </style>
 </head>
 <body>
@@ -51,7 +53,7 @@
         <h1>Cafe <span>Caption</span></h1>
     </header>
     
-    <div id="user-info" style="display: none; margin-bottom: 15px; font-size: 12px; color: var(--accent); text-align: center;">
+    <div id="user-info" style="display: none; margin-bottom: 15px; font-size: 12px; color: var(--accent); text-align: center; font-weight: 600;">
         <span id="display-email"></span> | <span id="user-credits"></span>
     </div>
 
@@ -67,7 +69,7 @@
         </div>
 
         <label>Target Audience</label>
-        <div class="segments" id="target-segments">
+        <div class="segments">
             <div class="seg active" onclick="setV('target','General',this)">🌍 All</div>
             <div class="seg" onclick="setV('target','Freelancers',this)">💻 Pros</div>
             <div class="seg" onclick="setV('target','Couples',this)">👩‍❤️‍👨 Date</div>
@@ -77,11 +79,11 @@
         
         <div style="text-align: center; margin-bottom: 15px;">
             <span onclick="toggleAdv()" style="font-size: 11px; color: var(--accent); cursor: pointer; border-bottom: 1px dashed var(--accent);">
-                ⚙️ Advanced Settings & Actions
+                ⚙️ Advanced Settings & Special Offers
             </span>
         </div>
 
-        <div id="adv-settings" style="display: none; margin-bottom: 20px; padding: 15px; background: #f9f9f9; border-radius: 12px;">
+        <div id="adv-settings" style="display: none; margin-bottom: 20px; padding: 15px; background: #f9f9f9; border-radius: 12px; border: 1px solid var(--border);">
             <label>Language</label>
             <div class="segments">
                 <div class="seg active" onclick="setV('lang','English',this)">EN</div>
@@ -91,10 +93,10 @@
                 <div class="seg" onclick="setV('lang','Italian',this)">IT</div>
             </div>
 
-            <label>Special Event / Promo</label>
-            <input type="text" id="event" placeholder="e.g. 1+1 on Latte, Jazz Night..." oninput="state.event = this.value">
+            <label>Mandatory Offer / Event</label>
+            <input type="text" id="event" placeholder="e.g. Free Cookie with Latte, Jazz Night..." oninput="state.event = this.value">
 
-            <label>Weather / Time</label>
+            <label>Environment</label>
             <div class="segments">
                 <div class="seg active" onclick="setV('weather','Random',this)">Auto 🌤</div>
                 <div class="seg" onclick="setV('weather','Sunny',this)">Sunny</div>
@@ -169,7 +171,7 @@ async function brewWeek() {
 async function executeGeneration(email, count) {
     const btn = count === 7 ? document.getElementById('go-week') : document.getElementById('go');
     const originalText = btn.innerText;
-    btn.innerText = "Roasting...";
+    btn.innerText = "Steeping...";
     btn.disabled = true;
 
     try {
@@ -185,19 +187,23 @@ async function executeGeneration(email, count) {
                 goal: state.goal,
                 weather: state.weather,
                 time: state.time,
-                event: state.event,
+                event: state.event || "", // СИНХРОНИЗИРОВАНО С БЭКЕНДОМ
                 variants: count
             })
         });
         
         const data = await res.json();
         if (data.error === "credits_depleted") return togglePriceSheet(true);
-        if (data.error) return alert(data.error);
+        if (data.error) return alert("Error: " + data.error);
 
         renderResults(data.texts);
-        updateUI();
+        
+        // Обновляем кредиты из ответа сервера
+        if (data.remaining_credits !== undefined) {
+            document.getElementById('user-credits').innerText = data.remaining_credits + ' credits';
+        }
     } catch (e) {
-        alert("Error connecting to server");
+        alert("Connection to Python server failed.");
     } finally {
         btn.innerText = originalText;
         btn.disabled = false;
@@ -209,14 +215,14 @@ function renderResults(texts) {
     texts.forEach(text => {
         const parts = text.split('|');
         const caption = parts[0] ? parts[0].trim() : text;
-        const photo = parts[1] ? parts[1].trim() : "Aesthetic cafe shot";
+        const photo = parts[1] ? parts[1].trim() : "Cinematic cafe shot";
         html += `
             <div class="receipt">
                 <div class="content-to-copy">${caption}</div>
                 <div class="photo-tip">📸 <strong>PHOTO:</strong> ${photo}</div>
                 <div class="actions">
                     <button class="action-btn btn-copy" onclick="copyText(this)">📋 COPY</button>
-                    <a class="action-btn btn-instagram" href="https://instagram.com" target="_blank">📸 IG</a>
+                    <a class="action-btn btn-instagram" href="https://instagram.com" target="_blank">📸 INSTAGRAM</a>
                 </div>
             </div>`;
     });
@@ -244,18 +250,36 @@ function togglePriceSheet(show) {
 function toggleAll() { toggleSheet(false); togglePriceSheet(false); }
 
 async function loginWithGoogle() {
-    await _supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
+    await _supabase.auth.signInWithOAuth({ 
+        provider: 'google', 
+        options: { redirectTo: window.location.origin } 
+    });
 }
 
 async function updateUI() {
     const { data: { user } } = await _supabase.auth.getUser();
     if (user) {
-        const res = await fetch(`/get-credits?email=${user.email}`);
-        const data = await res.json();
-        document.getElementById('user-info').style.display = 'block';
-        document.getElementById('display-email').innerText = user.email.split('@')[0];
-        document.getElementById('user-credits').innerText = (data.credits || 0) + ' credits';
+        try {
+            const res = await fetch(`/get-credits?email=${user.email}`);
+            const data = await res.json();
+            document.getElementById('user-info').style.display = 'block';
+            document.getElementById('display-email').innerText = user.email.split('@')[0];
+            document.getElementById('user-credits').innerText = (data.credits || 0) + ' credits';
+        } catch(e) {}
     }
+}
+
+async function buy(plan) {
+    const { data: { user } } = await _supabase.auth.getUser();
+    if (!user) return loginWithGoogle();
+
+    const res = await fetch('/create-checkout-session', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ email: user.email, plan: plan })
+    });
+    const session = await res.json();
+    if (session.url) window.location.href = session.url;
 }
 
 window.onload = async () => {
