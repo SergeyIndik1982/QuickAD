@@ -63,82 +63,52 @@ def get_db():
         db.close()
 
 def build_prompt(data):
-    # Достаем параметры, если их нет — ставим дефолт
     target = getattr(data, 'target', 'General')
     count = data.variants if data.variants > 1 else 1
     
-    # Словарь триггеров: это "контекстное топливо" для AI
     audience_triggers = {
-        "Freelancers": "Focus on productivity, deep work flow, high-speed Wi-Fi, and the 'third place' vibe between home and office.",
-        "Couples": "Focus on intimacy, soft lighting, shared moments, 'analog' connection, and cozy aesthetic.",
-        "Coffee Geeks": "Focus on extraction science, bean processing, flavor notes (acidity, body), and brewing precision.",
-        "Families": "Focus on mental break for parents, safe space for kids, morning rituals, and easy-going energy.",
-        "General": "Focus on high-quality hospitality and urban sanctuary vibes."
+        "Freelancers": "Focus on high-speed Wi-Fi, power outlets, productivity, and the perfect 'flow' state.",
+        "Couples": "Focus on romantic lighting, cozy corners, shared desserts, and intimate conversations.",
+        "Coffee Geeks": "Focus on bean origin, roast profiles, brewing methods (V60, Aeropress), and sensory notes.",
+        "Families": "Focus on spacious tables, kid-friendly treats, warm service, and a welcoming environment.",
+        "General": "Focus on high-quality service and a welcoming atmosphere."
     }
 
     trigger = audience_triggers.get(target, audience_triggers["General"])
     
-    # Логика окружения (погода и время)
-    weather_ctx = f"Weather: {data.weather}." if data.weather != "Random" else "Weather: Surprise me (match it to the caption mood)."
-    time_ctx = f"Time of Day: {data.time}." if data.time != "Random" else "Time of Day: Surprise me (vary it for different posts)."
+    # Умная логика погоды и времени
+    weather_ctx = f"Weather: {data.weather}." if data.weather != "Random" else "Weather: Surprise me (vary it for each post if multiple)."
+    time_ctx = f"Time of Day: {data.time}." if data.time != "Random" else "Time of Day: Surprise me (vary it for each post if multiple)."
 
-    # ФОРМИРУЕМ ИНСТРУКЦИЮ (Prompt Engineering)
+    # ФИНАЛЬНЫЙ СБОРНЫЙ ПРОМПТ (БЕЗ ПЕРЕЗАПИСИ)
     prompt = (
-        f"Context: You are the Voice of Brand for '{data.cafe_name}'. "
-        f"Language: {data.language}. Tone: {data.mood}. Target: {target}.\n"
-        f"Constraints: {trigger} {weather_ctx} {time_ctx}\n\n"
-        
-        f"Task: Write {count} Instagram posts that follow this High-Conversion structure:\n"
-        "1. Hook: Start with a punchy, relatable observation (max 1 sentence).\n"
-        "2. Body: Use the PAS framework (Problem: bad mood/need for focus -> Agitation: urban noise/rainy day -> Solution: your cafe).\n"
-        "3. CTA: A subtle, non-pushy invitation.\n\n"
-        
-        "Formatting Rules:\n"
-        "- Format: [Caption] | [Photo Script]\n"
-        "- Photo Script: Be specific. Describe lighting (cinematic, warm, moody), props, and camera angle (flat lay, close-up).\n"
-        "- Separator: '---'\n"
-        "- Language: Strict {data.language}. No English words unless it's coffee terminology.\n"
-        "- Emojis: Max 2 per post, placed naturally."
+        f"Act as a world-class Social Media Strategist for '{data.cafe_name}'.\n"
+        f"Language: {data.language}. Tone: {data.mood}. Focus: {data.goal}.\n"
+        f"Target Audience: {target}. {trigger}\n"
+        f"{weather_ctx} {time_ctx}\n\n"
+        f"Task: Write {count} unique Instagram posts. The atmosphere MUST match the weather and time context.\n\n"
+        "STRICT RULES:\n"
+        "- Format: [Caption text] | [Detailed Photo script: subject, lighting, angle].\n"
+        "- Captions: 2-4 sentences. Competitive, punchy, avoiding clichés.\n"
+        "- Photo script: Describe a scene that visually tells the story of the caption.\n"
+        "- Separator: Use '---' between posts.\n"
+        "- Emoji: Max 1-2 per post."
     )
     return prompt
+
 # --- ENDPOINTS ---
 
 @app.get("/get-credits")
 def get_credits(email: str, db: Session = Depends(get_db)):
-    ADMIN_EMAILS = ["indikautor@gmail.com"] # Твой email
     user = db.query(User).filter(User.email == email).first()
-    
     if not user:
-        # Если это ты, сразу даем корону и кредиты
-        is_admin = email in ADMIN_EMAILS
-        user = User(
-            email=email, 
-            credits=999 if is_admin else 3, 
-            is_premium=is_admin
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-        
+        user = User(email=email, credits=3, is_premium=False)
+        db.add(user); db.commit(); db.refresh(user)
     return {"credits": user.credits, "is_premium": user.is_premium}
 
 @app.post("/generate")
 async def generate(data: GenerateRequest, db: Session = Depends(get_db)):
-    # Список email-адресов, для которых всё бесплатно и бесконечно
-    ADMIN_EMAILS = ["indikautor@gmail.com"] 
-
     user = db.query(User).filter(User.email == data.email).first()
-    
-    # Если ты админ — создаем или обновляем запись с бесконечными кредитами
-    if data.email in ADMIN_EMAILS:
-        if not user:
-            user = User(email=data.email, is_premium=True, credits=999)
-            db.add(user); db.commit(); db.refresh(user)
-        else:
-            user.is_premium = True # Делаем админа премиумом навсегда
-            db.commit()
-    
-    # Стандартная проверка для обычных пользователей
     if not user:
         user = User(email=data.email, is_premium=False, credits=3)
         db.add(user); db.commit(); db.refresh(user)
@@ -146,8 +116,6 @@ async def generate(data: GenerateRequest, db: Session = Depends(get_db)):
     if not user.is_premium and user.credits <= 0:
         return {"error": "credits_depleted"}
 
-    # Дальше идет сам вызов AI (async with httpx.AsyncClient()...)
-    # ...
     async with httpx.AsyncClient() as client:
         headers = {"Authorization": f"Bearer {GROQ_API_KEY}"}
         payload = {
