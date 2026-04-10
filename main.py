@@ -105,12 +105,22 @@ def build_prompt(data):
 
 @app.get("/get-credits")
 def get_credits(email: str, db: Session = Depends(get_db)):
+    ADMIN_EMAILS = ["indikautor@gmail.com"] # Твой email
     user = db.query(User).filter(User.email == email).first()
+    
     if not user:
-        user = User(email=email, credits=999, is_premium=False)
-        db.add(user); db.commit(); db.refresh(user)
+        # Если это ты, сразу даем корону и кредиты
+        is_admin = email in ADMIN_EMAILS
+        user = User(
+            email=email, 
+            credits=999 if is_admin else 3, 
+            is_premium=is_admin
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        
     return {"credits": user.credits, "is_premium": user.is_premium}
-
 
 @app.post("/generate")
 async def generate(data: GenerateRequest, db: Session = Depends(get_db)):
