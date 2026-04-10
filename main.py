@@ -63,39 +63,44 @@ def get_db():
         db.close()
 
 def build_prompt(data):
+    # Достаем параметры, если их нет — ставим дефолт
     target = getattr(data, 'target', 'General')
     count = data.variants if data.variants > 1 else 1
     
+    # Словарь триггеров: это "контекстное топливо" для AI
     audience_triggers = {
-        "Freelancers": "Focus on high-speed Wi-Fi, power outlets, productivity, and the perfect 'flow' state.",
-        "Couples": "Focus on romantic lighting, cozy corners, shared desserts, and intimate conversations.",
-        "Coffee Geeks": "Focus on bean origin, roast profiles, brewing methods (V60, Aeropress), and sensory notes.",
-        "Families": "Focus on spacious tables, kid-friendly treats, warm service, and a welcoming environment.",
-        "General": "Focus on high-quality service and a welcoming atmosphere."
+        "Freelancers": "Focus on productivity, deep work flow, high-speed Wi-Fi, and the 'third place' vibe between home and office.",
+        "Couples": "Focus on intimacy, soft lighting, shared moments, 'analog' connection, and cozy aesthetic.",
+        "Coffee Geeks": "Focus on extraction science, bean processing, flavor notes (acidity, body), and brewing precision.",
+        "Families": "Focus on mental break for parents, safe space for kids, morning rituals, and easy-going energy.",
+        "General": "Focus on high-quality hospitality and urban sanctuary vibes."
     }
 
     trigger = audience_triggers.get(target, audience_triggers["General"])
     
-    # Умная логика погоды и времени
-    weather_ctx = f"Weather: {data.weather}." if data.weather != "Random" else "Weather: Surprise me (vary it for each post if multiple)."
-    time_ctx = f"Time of Day: {data.time}." if data.time != "Random" else "Time of Day: Surprise me (vary it for each post if multiple)."
+    # Логика окружения (погода и время)
+    weather_ctx = f"Weather: {data.weather}." if data.weather != "Random" else "Weather: Surprise me (match it to the caption mood)."
+    time_ctx = f"Time of Day: {data.time}." if data.time != "Random" else "Time of Day: Surprise me (vary it for different posts)."
 
-    # ФИНАЛЬНЫЙ СБОРНЫЙ ПРОМПТ (БЕЗ ПЕРЕЗАПИСИ)
+    # ФОРМИРУЕМ ИНСТРУКЦИЮ (Prompt Engineering)
     prompt = (
-        f"Act as a world-class Social Media Strategist for '{data.cafe_name}'.\n"
-        f"Language: {data.language}. Tone: {data.mood}. Focus: {data.goal}.\n"
-        f"Target Audience: {target}. {trigger}\n"
-        f"{weather_ctx} {time_ctx}\n\n"
-        f"Task: Write {count} unique Instagram posts. The atmosphere MUST match the weather and time context.\n\n"
-        "STRICT RULES:\n"
-        "- Format: [Caption text] | [Detailed Photo script: subject, lighting, angle].\n"
-        "- Captions: 2-4 sentences. Competitive, punchy, avoiding clichés.\n"
-        "- Photo script: Describe a scene that visually tells the story of the caption.\n"
-        "- Separator: Use '---' between posts.\n"
-        "- Emoji: Max 1-2 per post."
+        f"Context: You are the Voice of Brand for '{data.cafe_name}'. "
+        f"Language: {data.language}. Tone: {data.mood}. Target: {target}.\n"
+        f"Constraints: {trigger} {weather_ctx} {time_ctx}\n\n"
+        
+        f"Task: Write {count} Instagram posts that follow this High-Conversion structure:\n"
+        "1. Hook: Start with a punchy, relatable observation (max 1 sentence).\n"
+        "2. Body: Use the PAS framework (Problem: bad mood/need for focus -> Agitation: urban noise/rainy day -> Solution: your cafe).\n"
+        "3. CTA: A subtle, non-pushy invitation.\n\n"
+        
+        "Formatting Rules:\n"
+        "- Format: [Caption] | [Photo Script]\n"
+        "- Photo Script: Be specific. Describe lighting (cinematic, warm, moody), props, and camera angle (flat lay, close-up).\n"
+        "- Separator: '---'\n"
+        "- Language: Strict {data.language}. No English words unless it's coffee terminology.\n"
+        "- Emojis: Max 2 per post, placed naturally."
     )
     return prompt
-
 # --- ENDPOINTS ---
 
 @app.get("/get-credits")
