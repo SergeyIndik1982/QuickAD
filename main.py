@@ -46,9 +46,10 @@ class GenerateRequest(BaseModel):
     language: str
     mood: str
     goal: str
-    target: str
+    target: str = "General"
     weather: str = "Random"
     time: str = "Random"
+    event: str = ""  # ДОБАВЛЕНО: теперь сервер знает про это поле
     variants: int = 1
 
 class CheckoutRequest(BaseModel):
@@ -63,9 +64,8 @@ def get_db():
         db.close()
 
 def build_prompt(data):
-    # 1. Извлекаем параметры (с защитой от пустых значений)
     target = getattr(data, 'target', 'General')
-    event = getattr(data, 'event', '')
+    event = getattr(data, 'event', '') # Безопасное получение
     count = data.variants if data.variants > 0 else 1
     
     # 2. Словарь триггеров: это "интеллект" для каждого сегмента
