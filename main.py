@@ -107,8 +107,24 @@ def get_credits(email: str, db: Session = Depends(get_db)):
     return {"credits": user.credits, "is_premium": user.is_premium}
 
 @app.post("/generate")
+# Замени этот блок в эндпоинте /generate
+@app.post("/generate")
 async def generate(data: GenerateRequest, db: Session = Depends(get_db)):
+    # Список email-адресов, для которых всё бесплатно и бесконечно
+    ADMIN_EMAILS = ["твой_email@gmail.com"] 
+
     user = db.query(User).filter(User.email == data.email).first()
+    
+    # Если ты админ — создаем или обновляем запись с бесконечными кредитами
+    if data.email in ADMIN_EMAILS:
+        if not user:
+            user = User(email=data.email, is_premium=True, credits=999)
+            db.add(user); db.commit(); db.refresh(user)
+        else:
+            user.is_premium = True # Делаем админа премиумом навсегда
+            db.commit()
+    
+    # Стандартная проверка для обычных пользователей
     if not user:
         user = User(email=data.email, is_premium=False, credits=3)
         db.add(user); db.commit(); db.refresh(user)
@@ -116,6 +132,8 @@ async def generate(data: GenerateRequest, db: Session = Depends(get_db)):
     if not user.is_premium and user.credits <= 0:
         return {"error": "credits_depleted"}
 
+    # Дальше идет сам вызов AI (async with httpx.AsyncClient()...)
+    # ...
     async with httpx.AsyncClient() as client:
         headers = {"Authorization": f"Bearer {GROQ_API_KEY}"}
         payload = {
