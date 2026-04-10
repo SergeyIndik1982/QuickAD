@@ -63,43 +63,57 @@ def get_db():
         db.close()
 
 def build_prompt(data):
-    # Достаем параметры, если их нет — ставим дефолт
+    # 1. Извлекаем параметры (с защитой от пустых значений)
     target = getattr(data, 'target', 'General')
-    count = data.variants if data.variants > 1 else 1
+    event = getattr(data, 'event', '')
+    count = data.variants if data.variants > 0 else 1
     
-    # Словарь триггеров: это "контекстное топливо" для AI
+    # 2. Словарь триггеров: это "интеллект" для каждого сегмента
     audience_triggers = {
-        "Freelancers": "Focus on productivity, deep work flow, high-speed Wi-Fi, and the 'third place' vibe between home and office.",
-        "Couples": "Focus on intimacy, soft lighting, shared moments, 'analog' connection, and cozy aesthetic.",
-        "Coffee Geeks": "Focus on extraction science, bean processing, flavor notes (acidity, body), and brewing precision.",
-        "Families": "Focus on mental break for parents, safe space for kids, morning rituals, and easy-going energy.",
-        "General": "Focus on high-quality hospitality and urban sanctuary vibes."
+        "Freelancers": "Focus on deep work, productivity, high-speed Wi-Fi, and the perfect workspace atmosphere.",
+        "Couples": "Focus on romantic lighting, intimacy, shared desserts, and escaping the world together.",
+        "Families": "Focus on a stress-free environment, kid-friendly treats, and a well-deserved break for parents.",
+        "Coffee Geeks": "Focus on extraction, bean origin, roast profiles, and the craft of the perfect cup.",
+        "General": "Focus on a welcoming urban sanctuary and high-quality hospitality for everyone."
     }
 
     trigger = audience_triggers.get(target, audience_triggers["General"])
     
-    # Логика окружения (погода и время)
-    weather_ctx = f"Weather: {data.weather}." if data.weather != "Random" else "Weather: Surprise me (match it to the caption mood)."
-    time_ctx = f"Time of Day: {data.time}." if data.time != "Random" else "Time of Day: Surprise me (vary it for different posts)."
+    # 3. Обработка контекста (Погода и Время)
+    weather_ctx = f"Weather: {data.weather}." if data.weather != "Random" else "Weather: Surprise me (match it to a cozy cafe vibe)."
+    time_ctx = f"Time of Day: {data.time}." if data.time != "Random" else "Time of Day: Surprise me (vary it if multiple posts)."
+    
+    # 4. Логика Акций/Событий
+    event_ctx = ""
+    if event.strip():
+        event_ctx = f"### MANDATORY OFFER: Include this event/deal: '{event}'. Make it the main focus and create urgency."
 
-    # ФОРМИРУЕМ ИНСТРУКЦИЮ (Prompt Engineering)
+    # 5. Сборка финального промпта
     prompt = (
-        f"Context: You are the Voice of Brand for '{data.cafe_name}'. "
-        f"Language: {data.language}. Tone: {data.mood}. Target: {target}.\n"
-        f"Constraints: {trigger} {weather_ctx} {time_ctx}\n\n"
+        f"You are a World-Class Social Media Strategist for the cafe '{data.cafe_name}'.\n"
+        f"Language: {data.language}. Tone: {data.mood}. Target Audience: {target}.\n\n"
         
-        f"Task: Write {count} Instagram posts that follow this High-Conversion structure:\n"
-        "1. Hook: Start with a punchy, relatable observation (max 1 sentence).\n"
-        "2. Body: Use the PAS framework (Problem: bad mood/need for focus -> Agitation: urban noise/rainy day -> Solution: your cafe).\n"
-        "3. CTA: A subtle, non-pushy invitation.\n\n"
+        f"CONSTRAINTS:\n"
+        f"- {trigger}\n"
+        f"- Context: {weather_ctx} {time_ctx}\n"
+        f"{event_ctx}\n\n"
         
-        "Formatting Rules:\n"
-        "- Format: [Caption] | [Photo Script]\n"
-        "- Photo Script: Be specific. Describe lighting (cinematic, warm, moody), props, and camera angle (flat lay, close-up).\n"
-        "- Separator: '---'\n"
-        "- Language: Strict {data.language}. No English words unless it's coffee terminology.\n"
-        "- Emojis: Max 2 per post, placed naturally."
+        f"TASK:\n"
+        f"Write exactly {count} unique Instagram posts. Follow the PAS (Problem-Agitation-Solution) marketing structure.\n\n"
+        
+        "STRICT RULES FOR OUTPUT:\n"
+        "1. Hook: Start with a relatable, punchy opening line (max 1 sentence).\n"
+        "2. Body: Highlight a daily 'problem' or 'need', amplify it, and present the cafe experience as the perfect solution.\n"
+        "3. CTA: Add a natural, non-pushy invitation (Call to Action).\n"
+        "4. Visuals: For every post, provide a [Photo Script] describing the exact subject, cinematic lighting, and camera angle.\n"
+        "5. Language: Use strict {data.language}. Only professional coffee terms can remain in English if common.\n"
+        "6. Emojis: Max 1-2 per post, use them subtly.\n\n"
+        
+        "FORMAT:\n"
+        "[Caption text] | [Photo Script]\n"
+        "Use '---' (three dashes) only between separate posts."
     )
+    
     return prompt
 # --- ENDPOINTS ---
 
