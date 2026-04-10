@@ -107,7 +107,7 @@ def build_prompt(data):
 def get_credits(email: str, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == email).first()
     if not user:
-        user = User(email=email, credits=3, is_premium=False)
+        user = User(email=email, credits=999, is_premium=False)
         db.add(user); db.commit(); db.refresh(user)
     return {"credits": user.credits, "is_premium": user.is_premium}
 
