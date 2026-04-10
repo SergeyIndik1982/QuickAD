@@ -150,11 +150,10 @@ let state = {
     lang: 'English', 
     mood: 'Poetic', 
     goal: 'Atmosphere', 
-    target: 'Freelancers',
+    target: 'Freelancers', // Это должно совпадать с классом "active" в HTML
     weather: 'Random',
     time: 'Random' 
 };
-
 async function brew() {
     const { data: { user } } = await _supabase.auth.getUser();
     
