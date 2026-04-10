@@ -46,7 +46,7 @@ class GenerateRequest(BaseModel):
     language: str
     mood: str
     goal: str
-    target: str
+    target: str = "General"  # Добавь = "General"
     weather: str = "Random"
     time: str = "Random"
     variants: int = 1
