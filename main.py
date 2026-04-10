@@ -106,12 +106,11 @@ def get_credits(email: str, db: Session = Depends(get_db)):
         db.add(user); db.commit(); db.refresh(user)
     return {"credits": user.credits, "is_premium": user.is_premium}
 
-@app.post("/generate")
-# Замени этот блок в эндпоинте /generate
+
 @app.post("/generate")
 async def generate(data: GenerateRequest, db: Session = Depends(get_db)):
     # Список email-адресов, для которых всё бесплатно и бесконечно
-    ADMIN_EMAILS = ["твой_email@gmail.com"] 
+    ADMIN_EMAILS = ["indikautor@gmail.com"] 
 
     user = db.query(User).filter(User.email == data.email).first()
     
