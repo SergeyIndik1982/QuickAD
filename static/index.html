@@ -120,6 +120,9 @@
         <div class="seg" onclick="setV('time','Morning',this)">Morning</div>
         <div class="seg" onclick="setV('time','Evening',this)">Evening</div>
     </div>
+
+    <label>Special Offer / Event (Optional)</label>
+<input type="text" id="event" placeholder="e.g. 1+1 on Latte, Jazz Night..." oninput="state.event = this.value">
 </div>
         <button class="btn-main" id="go" onclick="brew()">Brew Content</button>
         <button class="btn-premium" id="go-week" onclick="brewWeek()">✨ Week Generator (7 Posts)</button>
