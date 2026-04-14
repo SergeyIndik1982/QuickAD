@@ -46,9 +46,10 @@ class GenerateRequest(BaseModel):
     language: str
     mood: str
     goal: str
-    target: str = "General"  # Добавь = "General"
+    target: str = "General"
     weather: str = "Random"
     time: str = "Random"
+    event: str = ""  # Добавили значение по умолчанию (пустая строка)
     variants: int = 1
 
 class CheckoutRequest(BaseModel):
@@ -64,35 +65,31 @@ def get_db():
 
 def build_prompt(data):
     target = getattr(data, 'target', 'General')
-    count = data.variants if data.variants > 1 else 1
+    event = getattr(data, 'event', '') # Безопасно вытаскиваем акцию
+    count = data.variants if data.variants > 0 else 1
     
     audience_triggers = {
-        "Freelancers": "Focus on high-speed Wi-Fi, power outlets, productivity, and the perfect 'flow' state.",
-        "Couples": "Focus on romantic lighting, cozy corners, shared desserts, and intimate conversations.",
-        "Coffee Geeks": "Focus on bean origin, roast profiles, brewing methods (V60, Aeropress), and sensory notes.",
-        "Families": "Focus on spacious tables, kid-friendly treats, warm service, and a welcoming environment.",
-        "General": "Focus on high-quality service and a welcoming atmosphere."
+        "Freelancers": "Focus on high-speed Wi-Fi, productivity, and work atmosphere.",
+        "Couples": "Focus on romantic lighting and shared moments.",
+        "Coffee Geeks": "Focus on beans, roasting, and craft.",
+        "Families": "Focus on kid-friendly treats and space.",
+        "General": "Focus on quality and hospitality."
     }
 
     trigger = audience_triggers.get(target, audience_triggers["General"])
     
-    # Умная логика погоды и времени
-    weather_ctx = f"Weather: {data.weather}." if data.weather != "Random" else "Weather: Surprise me (vary it for each post if multiple)."
-    time_ctx = f"Time of Day: {data.time}." if data.time != "Random" else "Time of Day: Surprise me (vary it for each post if multiple)."
+    # Добавляем блок акции, если она заполнена
+    event_ctx = ""
+    if event.strip():
+        event_ctx = f"\n### SPECIAL EVENT/OFFER: {event}. Mention this clearly and create a call to action around it."
 
-    # ФИНАЛЬНЫЙ СБОРНЫЙ ПРОМПТ (БЕЗ ПЕРЕЗАПИСИ)
     prompt = (
-        f"Act as a world-class Social Media Strategist for '{data.cafe_name}'.\n"
-        f"Language: {data.language}. Tone: {data.mood}. Focus: {data.goal}.\n"
-        f"Target Audience: {target}. {trigger}\n"
-        f"{weather_ctx} {time_ctx}\n\n"
-        f"Task: Write {count} unique Instagram posts. The atmosphere MUST match the weather and time context.\n\n"
-        "STRICT RULES:\n"
-        "- Format: [Caption text] | [Detailed Photo script: subject, lighting, angle].\n"
-        "- Captions: 2-4 sentences. Competitive, punchy, avoiding clichés.\n"
-        "- Photo script: Describe a scene that visually tells the story of the caption.\n"
-        "- Separator: Use '---' between posts.\n"
-        "- Emoji: Max 1-2 per post."
+        f"Act as a Social Media Strategist for '{data.cafe_name}'.\n"
+        f"Language: {data.language}. Tone: {data.mood}. Target: {target}.\n"
+        f"Context: {data.weather} weather, {data.time} time. {trigger}"
+        f"{event_ctx}\n\n" # Вставляем акцию здесь
+        f"Task: Write {count} Instagram posts. Format: [Caption] | [Photo Script]. "
+        "Separator: '---'."
     )
     return prompt
 
