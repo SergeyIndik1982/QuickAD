@@ -197,16 +197,16 @@ async function executeGeneration(email) {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
-                email: email,
-                cafe_name: nameInput.value,
-                language: state.lang,
-                mood: state.mood,
-                target: state.target,
-                goal: state.goal,
-                weather: state.weather, // ИСПРАВЛЕНО: берем из state
-                time: state.time,       // ИСПРАВЛЕНО: добавлена запятая
-                variants: 1 
-            })
+    email: email,
+    cafe_name: nameInput.value,
+    language: state.lang,
+    mood: state.mood,
+    target: state.target,
+    goal: state.goal,
+    weather: state.weather,
+    time: state.time,
+    variants: 1 
+})
         });
         
         const data = await res.json();
