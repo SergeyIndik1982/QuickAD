@@ -68,7 +68,6 @@ def build_prompt(data):
     event = getattr(data, 'event', '') 
     count = data.variants if data.variants > 0 else 1
     
-    # 1. Продвинутые триггеры с акцентом на "ощущения"
     audience_triggers = {
         "Freelancers": "Focus on deep work flow, the hum of the grinder as white noise, and reliable sockets.",
         "Couples": "Focus on the clink of spoons, soft shadows, and a sanctuary from the outside world.",
@@ -78,29 +77,26 @@ def build_prompt(data):
     }
 
     trigger = audience_triggers.get(target, audience_triggers["General"])
-    
-    event_ctx = ""
-    if event.strip():
-        event_ctx = f"\n### CRITICAL PROMO: {event}. Integrate this naturally but make it the focal point."
+    event_ctx = f"\n### PROMO EVENT: {event}" if event.strip() else ""
 
-    # 2. Формируем "Инженерный" промпт
+    # Мы явно запрещаем вступления и лишние варианты
     prompt = (
-        f"Role: You are a Senior Copywriter specializing in sensory marketing for '{data.cafe_name}'.\n"
-        f"Target: {target}. Tone: {data.mood}. Language: {data.language}.\n"
-        f"Context: {data.weather} weather, {data.time}. {trigger}{event_ctx}\n\n"
+        f"You are a Senior Copywriter for '{data.cafe_name}'. Tone: {data.mood}. Language: {data.language}.\n"
+        f"Context: {data.weather} weather, {data.time}. Audience: {target}.\n"
+        f"Strategy: {trigger}{event_ctx}\n\n"
         
-        f"Task: Write {count} high-conversion Instagram posts.\n"
-        "Structure for each post:\n"
-        "1. Hook: Start with a punchy observation or a vivid sensory detail (max 1 sentence).\n"
-        "2. Body: Use the PAS (Problem-Agitation-Solution) or Bridge model. No generic adjectives!\n"
-        "3. CTA: A low-friction invitation.\n\n"
+        f"TASK: Write EXACTLY {count} Instagram post(s). No intro, no outro, no conversational filler.\n\n"
         
-        "Formatting & Constraints:\n"
-        "- Format: [Caption] | [Photo Script]\n"
-        "- Photo Script: Describe lighting (e.g., golden hour, moody shadows), angle, and key props.\n"
-        "- Separator: '---'\n"
-        "- Avoid: 'Welcome!', 'Best coffee', 'Come and visit'. Show, don't tell.\n"
-        "- Emojis: Max 2 per post, relevant to the context."
+        "STRICT FORMAT FOR EACH POST:\n"
+        "CAPTION: [Your punchy text here]\n"
+        "VISUAL: [Detailed photo description here]\n"
+        "--- (Use this separator ONLY between different posts)\n\n"
+        
+        "CONSTRAINTS:\n"
+        "- Use 'Show, Don't Tell' (sensory details like steam, clinking, aromas).\n"
+        "- Max 2 emojis per post.\n"
+        "- No generic 'Welcome' or 'Best coffee' phrases.\n"
+        f"- Strict {data.language} language for all content."
     )
     return prompt
 
