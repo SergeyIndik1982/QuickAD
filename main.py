@@ -76,15 +76,20 @@ def build_prompt(data):
         "General": "Focus on urban sanctuary vibes and high-quality hospitality."
     }
 
-    mood_instr = (
-      "Tone: Witty. Use the 'Expectation vs Reality' trope. "
-      "Focus on the irony: your brain wants sleep, but your boss wants the report. "
-      "Be a bit edgy. Avoid 'we are here for you' – instead use 'we have the caffeine you clearly need'.                  
-    )
+    # Исправленная логика настроения
+    if data.mood.lower() in ["witty", "остроумный", "шутливый"]:
+        mood_instr = (
+            "Tone: Witty. Use the 'Expectation vs Reality' trope. "
+            "Focus on the irony: your brain wants sleep, but your boss wants the report. "
+            "Be a bit edgy. Avoid 'we are here for you' – instead use 'we have the caffeine you clearly need'."
+        )
+    else:
+        # Стандартное поведение для других настроений
+        mood_instr = f"Tone: {data.mood}. Style: Professional and engaging."
+
     trigger = audience_triggers.get(target, audience_triggers["General"])
     event_ctx = f"\n### PROMO EVENT (MUST INTEGRATE): {event}" if event.strip() else ""
 
-    # Собираем промпт, используя mood_instr вместо обычного data.mood
     prompt = (
         f"You are a Senior Copywriter for '{data.cafe_name}'. {mood_instr}\n"
         f"Language: {data.language}. Context: {data.weather} weather, {data.time}. Audience: {target}.\n"
