@@ -77,26 +77,32 @@ def build_prompt(data):
     }
 
     trigger = audience_triggers.get(target, audience_triggers["General"])
-    event_ctx = f"\n### PROMO EVENT: {event}" if event.strip() else ""
+    event_ctx = f"\n### PROMO EVENT (MUST INTEGRATE): {event}" if event.strip() else ""
 
-    # Мы явно запрещаем вступления и лишние варианты
+    # Собираем всё в одну строгую инструкцию
     prompt = (
         f"You are a Senior Copywriter for '{data.cafe_name}'. Tone: {data.mood}. Language: {data.language}.\n"
         f"Context: {data.weather} weather, {data.time}. Audience: {target}.\n"
         f"Strategy: {trigger}{event_ctx}\n\n"
         
-        f"TASK: Write EXACTLY {count} Instagram post(s). No intro, no outro, no conversational filler.\n\n"
+        f"TASK: Write EXACTLY {count} Instagram post(s). No intro, no conversational filler.\n\n"
         
-        "STRICT FORMAT FOR EACH POST:\n"
-        "CAPTION: [Your punchy text here]\n"
-        "VISUAL: [Detailed photo description here]\n"
-        "--- (Use this separator ONLY between different posts)\n\n"
+        "STRICT FORMATTING RULES (MANDATORY):\n"
+        "Use this EXACT template for each post:\n"
+        "TEXT_START\n"
+        "[Your caption here]\n"
+        "TEXT_END\n"
+        "PHOTO_START\n"
+        "[Your photo script here]\n"
+        "PHOTO_END\n"
+        "--- (Separator only between posts)\n\n"
         
         "CONSTRAINTS:\n"
-        "- Use 'Show, Don't Tell' (sensory details like steam, clinking, aromas).\n"
+        "- Use sensory marketing: describe smells, sounds, and textures.\n"
+        "- No cliches like 'Best coffee' or 'Cozy atmosphere'. Show it through details.\n"
+        "- Modern, conversational style. Not overly poetic.\n"
         "- Max 2 emojis per post.\n"
-        "- No generic 'Welcome' or 'Best coffee' phrases.\n"
-        f"- Strict {data.language} language for all content."
+        f"- Output everything strictly in {data.language}."
     )
     return prompt
 
