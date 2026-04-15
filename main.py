@@ -76,33 +76,37 @@ def build_prompt(data):
         "General": "Focus on urban sanctuary vibes and high-quality hospitality."
     }
 
+    # Логика настроения
+    if data.mood.lower() in ["witty", "остроумный", "шутливый"]:
+        mood_instr = (
+            "Tone: Witty and Sarcastic. Use irony. Relate to caffeine addiction, "
+            "deadlines, and 'productive' procrastination. Be the 'cool' barista who knows their pain. "
+            "Anti-cliche: NO 'best coffee' phrases."
+        )
+    else:
+        mood_instr = f"Tone: {data.mood}. Style: Modern and conversational."
+
     trigger = audience_triggers.get(target, audience_triggers["General"])
     event_ctx = f"\n### PROMO EVENT (MUST INTEGRATE): {event}" if event.strip() else ""
 
-    # Собираем всё в одну строгую инструкцию
+    # Собираем промпт, используя mood_instr вместо обычного data.mood
     prompt = (
-        f"You are a Senior Copywriter for '{data.cafe_name}'. Tone: {data.mood}. Language: {data.language}.\n"
-        f"Context: {data.weather} weather, {data.time}. Audience: {target}.\n"
+        f"You are a Senior Copywriter for '{data.cafe_name}'. {mood_instr}\n"
+        f"Language: {data.language}. Context: {data.weather} weather, {data.time}. Audience: {target}.\n"
         f"Strategy: {trigger}{event_ctx}\n\n"
         
         f"TASK: Write EXACTLY {count} Instagram post(s). No intro, no conversational filler.\n\n"
         
         "STRICT FORMATTING RULES (MANDATORY):\n"
-        "Use this EXACT template for each post:\n"
-        "TEXT_START\n"
-        "[Your caption here]\n"
-        "TEXT_END\n"
-        "PHOTO_START\n"
-        "[Your photo script here]\n"
-        "PHOTO_END\n"
+        "TEXT_START\n[Your caption here]\nTEXT_END\n"
+        "PHOTO_START\n[Your photo script here]\nPHOTO_END\n"
         "--- (Separator only between posts)\n\n"
         
         "CONSTRAINTS:\n"
         "- Use sensory marketing: describe smells, sounds, and textures.\n"
-        "- No cliches like 'Best coffee' or 'Cozy atmosphere'. Show it through details.\n"
-        "- Modern, conversational style. Not overly poetic.\n"
+        "- No 'whispering winds' or 'dancing shadows' unless in Poetic mood.\n"
         "- Max 2 emojis per post.\n"
-        f"- Output everything strictly in {data.language}."
+        f"- Output strictly in {data.language}."
     )
     return prompt
 
