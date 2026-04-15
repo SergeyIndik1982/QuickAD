@@ -65,31 +65,42 @@ def get_db():
 
 def build_prompt(data):
     target = getattr(data, 'target', 'General')
-    event = getattr(data, 'event', '') # Безопасно вытаскиваем акцию
+    event = getattr(data, 'event', '') 
     count = data.variants if data.variants > 0 else 1
     
+    # 1. Продвинутые триггеры с акцентом на "ощущения"
     audience_triggers = {
-        "Freelancers": "Focus on high-speed Wi-Fi, productivity, and work atmosphere.",
-        "Couples": "Focus on romantic lighting and shared moments.",
-        "Coffee Geeks": "Focus on beans, roasting, and craft.",
-        "Families": "Focus on kid-friendly treats and space.",
-        "General": "Focus on quality and hospitality."
+        "Freelancers": "Focus on deep work flow, the hum of the grinder as white noise, and reliable sockets.",
+        "Couples": "Focus on the clink of spoons, soft shadows, and a sanctuary from the outside world.",
+        "Coffee Geeks": "Focus on extraction, bean processing notes (acidity/body), and precision brewing.",
+        "Families": "Focus on easy mornings, no-spill cups, and sugar-dusted smiles.",
+        "General": "Focus on urban sanctuary vibes and high-quality hospitality."
     }
 
     trigger = audience_triggers.get(target, audience_triggers["General"])
     
-    # Добавляем блок акции, если она заполнена
     event_ctx = ""
     if event.strip():
-        event_ctx = f"\n### SPECIAL EVENT/OFFER: {event}. Mention this clearly and create a call to action around it."
+        event_ctx = f"\n### CRITICAL PROMO: {event}. Integrate this naturally but make it the focal point."
 
+    # 2. Формируем "Инженерный" промпт
     prompt = (
-        f"Act as a Social Media Strategist for '{data.cafe_name}'.\n"
-        f"Language: {data.language}. Tone: {data.mood}. Target: {target}.\n"
-        f"Context: {data.weather} weather, {data.time} time. {trigger}"
-        f"{event_ctx}\n\n" # Вставляем акцию здесь
-        f"Task: Write {count} Instagram posts. Format: [Caption] | [Photo Script]. "
-        "Separator: '---'."
+        f"Role: You are a Senior Copywriter specializing in sensory marketing for '{data.cafe_name}'.\n"
+        f"Target: {target}. Tone: {data.mood}. Language: {data.language}.\n"
+        f"Context: {data.weather} weather, {data.time}. {trigger}{event_ctx}\n\n"
+        
+        f"Task: Write {count} high-conversion Instagram posts.\n"
+        "Structure for each post:\n"
+        "1. Hook: Start with a punchy observation or a vivid sensory detail (max 1 sentence).\n"
+        "2. Body: Use the PAS (Problem-Agitation-Solution) or Bridge model. No generic adjectives!\n"
+        "3. CTA: A low-friction invitation.\n\n"
+        
+        "Formatting & Constraints:\n"
+        "- Format: [Caption] | [Photo Script]\n"
+        "- Photo Script: Describe lighting (e.g., golden hour, moody shadows), angle, and key props.\n"
+        "- Separator: '---'\n"
+        "- Avoid: 'Welcome!', 'Best coffee', 'Come and visit'. Show, don't tell.\n"
+        "- Emojis: Max 2 per post, relevant to the context."
     )
     return prompt
 
