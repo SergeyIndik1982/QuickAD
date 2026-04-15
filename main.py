@@ -76,16 +76,11 @@ def build_prompt(data):
         "General": "Focus on urban sanctuary vibes and high-quality hospitality."
     }
 
-    # Логика настроения
-    if data.mood.lower() in ["witty", "остроумный", "шутливый"]:
-        mood_instr = (
-            "Tone: Witty and Sarcastic. Use irony. Relate to caffeine addiction, "
-            "deadlines, and 'productive' procrastination. Be the 'cool' barista who knows their pain. "
-            "Anti-cliche: NO 'best coffee' phrases."
-        )
-    else:
-        mood_instr = f"Tone: {data.mood}. Style: Modern and conversational."
-
+   mood_instr = (
+    "Tone: Witty. Use the 'Expectation vs Reality' trope. "
+    "Focus on the irony: your brain wants sleep, but your boss wants the report. "
+    "Be a bit edgy. Avoid 'we are here for you' – instead use 'we have the caffeine you clearly need'."
+)
     trigger = audience_triggers.get(target, audience_triggers["General"])
     event_ctx = f"\n### PROMO EVENT (MUST INTEGRATE): {event}" if event.strip() else ""
 
