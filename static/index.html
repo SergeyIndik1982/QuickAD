@@ -289,6 +289,221 @@ async function updateUI() {
         } catch(e) {}
     }
 }
+<script>
+const _supabase = supabase.createClient('https://fhfxpwgqnwnlafekmmrm.supabase.co', 'sb_publishable_0pLQ3vw_4N55UL-XCiytmA_Jl0HkYEh');
+
+let state = { 
+    lang: 'English', 
+    mood: 'Poetic', 
+    goal: 'Atmosphere', 
+    target: 'Freelancers',
+    weather: 'Random',
+    time: 'Random',
+    event: '' 
+};
+
+// Функция входа
+async function loginWithGoogle() {
+    await _supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: window.location.origin }
+    });
+}
+
+// Проверка кредитов перед запуском
+async function brew() {
+    const { data: { user } } = await _supabase.auth.getUser();
+    
+    if (!user) {
+        localStorage.setItem('temp_name', document.getElementById('name').value);
+        localStorage.setItem('auto_brew', 'true');
+        return loginWithGoogle();
+    }
+
+    try {
+        const res = await fetch(`/get-credits?email=${user.email}`);
+        const profile = await res.json();
+
+        if (!profile.is_premium && profile.credits <= 0) {
+            return togglePriceSheet(true);
+        }
+        executeGeneration(user.email);
+    } catch (e) {
+        console.error("Auth check failed", e);
+    }
+}
+
+// Генерация ОДНОГО поста
+async function executeGeneration(email) {
+    const nameInput = document.getElementById('name');
+    const eventInput = document.getElementById('event');
+    const btn = document.getElementById('go');
+    
+    btn.innerText = "Steeping...";
+    btn.disabled = true;
+
+    try {
+        const res = await fetch('/generate', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                email: email,
+                cafe_name: nameInput.value,
+                language: state.lang,
+                mood: state.mood,
+                target: state.target,
+                goal: state.goal,
+                weather: state.weather,
+                time: state.time,
+                event: eventInput.value, // Передаем акцию
+                variants: 1 
+            })
+        });
+        
+        const data = await res.json();
+        
+        if (data.error === "credits_depleted") {
+            return togglePriceSheet(true);
+        } else if (data.error) {
+            return alert(data.error);
+        }
+
+        renderResults(data.texts);
+        updateCreditDisplay(data.remaining_credits);
+    } catch (e) {
+        alert("Connection error to Python server");
+    } finally {
+        btn.innerText = "Brew Content";
+        btn.disabled = false;
+    }
+}
+
+// Генерация НЕДЕЛИ (7 постов)
+async function brewWeek() {
+    const { data: { user } } = await _supabase.auth.getUser();
+    if (!user) return loginWithGoogle();
+
+    const nameInput = document.getElementById('name');
+    const eventInput = document.getElementById('event');
+    const btn = document.getElementById('go-week');
+    
+    btn.innerText = "Roasting...";
+    btn.disabled = true;
+
+    try {
+        const res = await fetch('/generate', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                email: user.email,
+                cafe_name: nameInput.value,
+                language: state.lang,
+                mood: state.mood,
+                target: state.target,
+                goal: state.goal,
+                weather: state.weather,
+                time: state.time,
+                event: eventInput.value, // Передаем акцию
+                variants: 7 
+            })
+        });
+        const data = await res.json();
+        if (data.error === "credits_depleted") return togglePriceSheet(true);
+        
+        renderResults(data.texts);
+        updateCreditDisplay(data.remaining_credits);
+    } catch (e) {
+        alert("Error brewing week");
+    } finally {
+        btn.innerText = "✨ Week Generator (7 Posts)";
+        btn.disabled = false;
+    }
+}
+
+// Отрисовка результатов (РАЗДЕЛЕНИЕ ПОСТА И ФОТО)
+function renderResults(texts) {
+    let html = '';
+    texts.forEach((text, index) => {
+        const parts = text.split('|');
+        const caption = parts[0] ? parts[0].trim() : text;
+        const photo = parts[1] ? parts[1].trim() : "Aesthetic cafe shot";
+        
+        html += `
+            <div class="receipt">
+                <div class="content-to-copy" id="post-text-${index}">${caption}</div>
+                
+                <div class="actions">
+                    <button class="action-btn btn-copy" onclick="copyToClipboard('post-text-${index}', this)">📋 COPY POST</button>
+                    <button class="action-btn btn-instagram" onclick="window.open('https://instagram.com')">📸 IG</button>
+                </div>
+
+                <div class="photo-tip">
+                    <strong style="display:block; margin-bottom:4px; color:var(--accent); font-size:10px;">📸 PHOTO DIRECTION:</strong>
+                    ${photo}
+                </div>
+            </div>`;
+    });
+    document.getElementById('results-container').innerHTML = html;
+    toggleSheet(true);
+}
+
+// Улучшенное копирование
+function copyToClipboard(elementId, btn) {
+    const text = document.getElementById(elementId).innerText;
+    navigator.clipboard.writeText(text).then(() => {
+        const originalText = btn.innerHTML;
+        btn.innerText = "COPIED! ✅";
+        btn.style.background = "#A39184";
+        btn.style.color = "white";
+        
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.style.background = "#F1EFEF";
+            btn.style.color = "var(--text)";
+        }, 2000);
+    });
+}
+
+// UI Функции
+function toggleSheet(show) {
+    document.getElementById('resultSheet').classList.toggle('active', show);
+    document.getElementById('blur').style.display = show ? 'block' : 'none';
+}
+
+function togglePriceSheet(show) {
+    document.getElementById('priceSheet').classList.toggle('active', show);
+    document.getElementById('blur').style.display = show ? 'block' : 'none';
+}
+
+function toggleAll() {
+    toggleSheet(false);
+    togglePriceSheet(false);
+}
+
+function setV(k, v, el) {
+    state[k] = v;
+    el.parentElement.querySelectorAll('.seg').forEach(x => x.classList.remove('active'));
+    el.classList.add('active');
+}
+
+function updateCreditDisplay(credits) {
+    if (credits !== undefined) {
+        document.getElementById('user-credits').innerText = credits + ' credits';
+    }
+}
+
+async function updateUI() {
+    const { data: { user } } = await _supabase.auth.getUser();
+    if (user) {
+        try {
+            const res = await fetch(`/get-credits?email=${user.email}`);
+            const data = await res.json();
+            document.getElementById('user-info').style.display = 'block';
+            document.getElementById('display-email').innerText = user.email.split('@')[0];
+            updateCreditDisplay(data.credits);
+        } catch(e) {}
+    }
+}
 
 async function buy(plan) {
     const { data: { user } } = await _supabase.auth.getUser();
@@ -318,45 +533,6 @@ window.onload = async () => {
         }
     }
 };
-
-async function brewWeek() {
-    const { data: { user } } = await _supabase.auth.getUser();
-    if (!user) return loginWithGoogle();
-
-    const nameInput = document.getElementById('name');
-    const btn = document.getElementById('go-week');
-    btn.innerText = "Roasting...";
-    btn.disabled = true;
-
-    try {
-        const res = await fetch('/generate', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                email: user.email,
-                cafe_name: nameInput.value,
-                language: state.lang,
-                mood: state.mood,
-                target: state.target,
-                goal: state.goal,
-                weather: state.weather,
-                time: state.time, // ИСПРАВЛЕНО: добавлена запятая
-                variants: 7 
-            })
-        });
-        const data = await res.json();
-        if (data.error === "credits_depleted") return togglePriceSheet(true);
-        renderResults(data.texts);
-        if (data.remaining_credits !== undefined) {
-            document.getElementById('user-credits').innerText = data.remaining_credits + ' credits';
-        }
-    } catch (e) {
-        alert("Error brewing week");
-    } finally {
-        btn.innerText = "✨ Week Generator (7 Posts)";
-        btn.disabled = false;
-    }
-}
 </script>
 </body>
 </html>
