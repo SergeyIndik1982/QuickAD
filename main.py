@@ -111,6 +111,19 @@ def build_prompt(data):
     return prompt
 
 # --- ENDPOINTS ---
+@app.get("/logo.png")
+async def get_logo():
+    # Ищем файл в корне проекта
+    file_path = "logo.png"
+    if os.path.exists(file_path):
+        return FileResponse(file_path, media_type="image/png")
+    
+    # Если не нашли в корне, попробуем в папке static
+    static_path = os.path.join("static", "logo.png")
+    if os.path.exists(static_path):
+        return FileResponse(static_path, media_type="image/png")
+        
+    return {"error": "File not found"}
 
 @app.get("/get-credits")
 def get_credits(email: str, db: Session = Depends(get_db)):
