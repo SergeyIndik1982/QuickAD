@@ -5,6 +5,7 @@ import asyncio
 from fastapi import FastAPI, Request, Header, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Column, String, Boolean, Integer
 from sqlalchemy.ext.declarative import declarative_base
@@ -32,6 +33,7 @@ Base.metadata.create_all(bind=engine)
 # --- APP SETUP ---
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
