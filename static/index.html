@@ -229,19 +229,29 @@ async function executeGeneration(email) {
     }
 }
 
+// Отрисовка результатов: разделяем пост и сценарий фото
 function renderResults(texts) {
     let html = '';
-    texts.forEach(text => {
+    texts.forEach((text, index) => {
+        // AI обычно выдает текст в формате "Пост | Фото"
         const parts = text.split('|');
         const caption = parts[0] ? parts[0].trim() : text;
         const photo = parts[1] ? parts[1].trim() : "Aesthetic cafe shot";
+        
         html += `
             <div class="receipt">
-                <div class="content-to-copy">${caption}</div>
-                <div class="photo-tip">📸 <strong>PHOTO:</strong> ${photo}</div>
+                <div class="content-to-copy" id="post-text-${index}">${caption}</div>
+                
                 <div class="actions">
-                    <button class="action-btn btn-copy" onclick="copyText(this)">📋 COPY</button>
+                    <button class="action-btn btn-copy" onclick="copyOnlyPost('post-text-${index}', this)">📋 COPY POST</button>
                     <button class="action-btn btn-instagram" onclick="window.open('https://instagram.com')">📸 IG</button>
+                </div>
+
+                <div class="photo-tip">
+                    <strong style="display:block; margin-bottom:4px; color:var(--accent); font-size:10px; font-family: 'Inter', sans-serif;">
+                        📸 PHOTO DIRECTION:
+                    </strong>
+                    ${photo}
                 </div>
             </div>`;
     });
@@ -249,13 +259,25 @@ function renderResults(texts) {
     toggleSheet(true);
 }
 
-function copyText(btn) {
-    const text = btn.closest('.receipt').querySelector('.content-to-copy').innerText;
-    navigator.clipboard.writeText(text);
-    btn.innerText = "COPIED!";
-    setTimeout(() => btn.innerText = "📋 COPY", 2000);
+// Функция копирования только текста поста
+function copyOnlyPost(elementId, btn) {
+    const textToCopy = document.getElementById(elementId).innerText;
+    
+    navigator.clipboard.writeText(textToCopy).then(() => {
+        const originalText = btn.innerHTML;
+        btn.innerText = "COPIED! ✅";
+        btn.style.background = "#A39184";
+        btn.style.color = "white";
+        
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.style.background = "#F1EFEF";
+            btn.style.color = "var(--text)";
+        }, 2000);
+    }).catch(err => {
+        console.error('Ошибка копирования: ', err);
+    });
 }
-
 function toggleSheet(show) {
     document.getElementById('resultSheet').classList.toggle('active', show);
     document.getElementById('blur').style.display = show ? 'block' : 'none';
