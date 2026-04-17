@@ -100,9 +100,12 @@ def build_prompt(data):
         f"TASK: Write EXACTLY {count} Instagram post(s). No intro, no conversational filler.\n\n"
         
         "STRICT FORMATTING RULES (MANDATORY):\n"
-        "TEXT_START\n[Your caption here]\nTEXT_END\n"
-        "PHOTO_START\n[Your photo script here]\nPHOTO_END\n"
+        "For EACH post, use this EXACT structure:\n"
+        "[Write the caption here] | [Write the photo description here]\n"
         "--- (Separator only between posts)\n\n"
+        
+        "EXAMPLE:\n"
+        "Best coffee in town! | A close-up shot of a latte with heart art.\n"
         
         "CONSTRAINTS:\n"
         "- Use sensory marketing: describe smells, sounds, and textures.\n"
