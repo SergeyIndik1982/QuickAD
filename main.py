@@ -179,7 +179,7 @@ async def generate(data: GenerateRequest, db: Session = Depends(get_db)):
 
 @app.post("/create-checkout-session")
 async def create_checkout_session(data: CheckoutRequest):
-    DOMAIN = "https://cafecaption.com"
+    DOMAIN = os.getenv("BASE_URL", "https://cafecaption.com")
     try:
         session = stripe.checkout.Session.create(
             mode="subscription" if data.plan == "monthly" else "payment",
