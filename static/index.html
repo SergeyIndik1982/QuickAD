@@ -204,7 +204,7 @@ async function brew() {
 async function loginWithGoogle() {
     await _supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: window.location.origin }
+        options: { redirectTo: 'https://cafecaption.com' } // Указываем явно
     });
 }
 
