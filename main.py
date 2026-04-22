@@ -108,7 +108,9 @@ def build_prompt(data):
         "Best coffee in town! | A close-up shot of a latte with heart art.\n"
         
         "CONSTRAINTS:\n"
-        "- Use sensory marketing: describe smells, sounds, and textures.\n"
+        "- Use sensory marketing: describe smells, sounds, and textures (e.g., the click of a portafilter, the velvet of microfoam).\n"
+        "- BANNED WORDS: 'delicious', 'cozy', 'best', 'welcome'. Use precise sensory descriptors instead.\n"
+        "- Visual Direction: Avoid clichéd 'people smiling at camera' shots. Focus on cinematic details: hands, steam, bokeh, textures, and authentic 'behind-the-scenes' moments.\n"
         "- No 'whispering winds' or 'dancing shadows' unless in Poetic mood.\n"
         "- Max 2 emojis per post.\n"
         f"- Output strictly in {data.language}."
