@@ -65,66 +65,102 @@ def get_db():
     finally:
         db.close()
 
-def build_prompt(data):
-    target = getattr(data, 'target', 'General')
-    event = getattr(data, 'event', '') 
-    count = data.variants if data.variants > 0 else 1
-    day_of_week = getattr(data, 'day_of_week', 'Monday') # Желательно передавать день
+build_prompt(data):
 
-    # Фишка: Разнообразие по дням недели (Психология аудитории)
-    day_logic = {
-        "Monday": "Focus: Monday motivation, fresh start, 'fuel for the week', high energy, productivity.",
-        "Tuesday": "Focus: Routine, deep work, the perfect flow, mid-morning grind.",
-        "Wednesday": "Focus: Mid-week 'hump day', a well-deserved break, mental reset.",
-        "Thursday": "Focus: Anticipation of the weekend, networking, after-work meetups.",
-        "Friday": "Focus: Celebration, treating yourself, 'TGIF', social vibes, indulgence.",
-        "Saturday": "Focus: Slow living, long brunch, family, exploration, relaxed aesthetic.",
-        "Sunday": "Focus: Quiet reflection, planning the week ahead, self-care, comfort."
-    }
+    target = getattr(data, 'target', 'General')
+
+    event = getattr(data, 'event', '') 
+
+    count = data.variants if data.variants > 0 else 1
+
+    
 
     audience_triggers = {
+
         "Freelancers": "Focus on deep work flow, the hum of the grinder as white noise, and reliable sockets.",
+
         "Couples": "Focus on the clink of spoons, soft shadows, and a sanctuary from the outside world.",
+
         "Coffee Geeks": "Focus on extraction, bean processing notes (acidity/body), and precision brewing.",
+
         "Families": "Focus on easy mornings, no-spill cups, and sugar-dusted smiles.",
+
         "General": "Focus on urban sanctuary vibes and high-quality hospitality."
+
     }
 
-    # Логика настроения
+
+
+    # Исправленная логика настроения
+
     if data.mood.lower() in ["witty", "остроумный", "шутливый"]:
+
         mood_instr = (
+
             "Tone: Witty. Use the 'Expectation vs Reality' trope. "
+
             "Focus on the irony: your brain wants sleep, but your boss wants the report. "
+
             "Be a bit edgy. Avoid 'we are here for you' – instead use 'we have the caffeine you clearly need'."
+
         )
+
     else:
+
+        # Стандартное поведение для других настроений
+
         mood_instr = f"Tone: {data.mood}. Style: Professional and engaging."
 
+
+
     trigger = audience_triggers.get(target, audience_triggers["General"])
-    # Берем логику дня, если это недельная генерация (count > 1)
-    weekly_context = f"\nWEEKLY VARIATION: {day_logic.get(day_of_week, day_logic['Monday'])}" if count > 1 else ""
+
     event_ctx = f"\n### PROMO EVENT (MUST INTEGRATE): {event}" if event.strip() else ""
 
+
+
     prompt = (
+
         f"You are a Senior Copywriter for '{data.cafe_name}'. {mood_instr}\n"
-        f"Language: {data.language}. Context: {data.weather} weather, {data.time}. Audience: {target}.{weekly_context}\n"
+
+        f"Language: {data.language}. Context: {data.weather} weather, {data.time}. Audience: {target}.\n"
+
         f"Strategy: {trigger}{event_ctx}\n\n"
+
         
-        f"TASK: Write EXACTLY {count} Instagram post(s). Each post must represent a DIFFERENT day of the week logic if count > 1. "
-        "No intro, no conversational filler.\n\n"
+
+        f"TASK: Write EXACTLY {count} Instagram post(s). No intro, no conversational filler.\n\n"
+
         
+
         "STRICT FORMATTING RULES (MANDATORY):\n"
+
         "For EACH post, use this EXACT structure:\n"
-        "Caption: [Write the text here]\n"
-        "Visual: [Write the photo/video description here]\n"
+
+        "[Write the caption here] | [Write the photo description here]\n"
+
         "--- (Separator only between posts)\n\n"
+
         
+
+        "EXAMPLE:\n"
+
+        "Best coffee in town! | A close-up shot of a latte with heart art.\n"
+
+        
+
         "CONSTRAINTS:\n"
-        "- BANNED WORDS: 'delicious', 'cozy', 'best', 'welcome'.\n"
-        "- Use sensory marketing: describe smells (toasted nuts), sounds (steam wand hiss), and textures (velvety foam).\n"
+
+        "- Use sensory marketing: describe smells, sounds, and textures.\n"
+
+        "- No 'whispering winds' or 'dancing shadows' unless in Poetic mood.\n"
+
         "- Max 2 emojis per post.\n"
+
         f"- Output strictly in {data.language}."
+
     )
+
     return prompt
 
 # --- ENDPOINTS ---
