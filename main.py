@@ -65,102 +65,54 @@ def get_db():
     finally:
         db.close()
 
-build_prompt(data):
-
+def build_prompt(data):
     target = getattr(data, 'target', 'General')
-
     event = getattr(data, 'event', '') 
-
     count = data.variants if data.variants > 0 else 1
-
     
-
     audience_triggers = {
-
         "Freelancers": "Focus on deep work flow, the hum of the grinder as white noise, and reliable sockets.",
-
         "Couples": "Focus on the clink of spoons, soft shadows, and a sanctuary from the outside world.",
-
         "Coffee Geeks": "Focus on extraction, bean processing notes (acidity/body), and precision brewing.",
-
         "Families": "Focus on easy mornings, no-spill cups, and sugar-dusted smiles.",
-
         "General": "Focus on urban sanctuary vibes and high-quality hospitality."
-
     }
 
-
-
     # Исправленная логика настроения
-
     if data.mood.lower() in ["witty", "остроумный", "шутливый"]:
-
         mood_instr = (
-
             "Tone: Witty. Use the 'Expectation vs Reality' trope. "
-
             "Focus on the irony: your brain wants sleep, but your boss wants the report. "
-
             "Be a bit edgy. Avoid 'we are here for you' – instead use 'we have the caffeine you clearly need'."
-
         )
-
     else:
-
         # Стандартное поведение для других настроений
-
         mood_instr = f"Tone: {data.mood}. Style: Professional and engaging."
 
-
-
     trigger = audience_triggers.get(target, audience_triggers["General"])
-
     event_ctx = f"\n### PROMO EVENT (MUST INTEGRATE): {event}" if event.strip() else ""
 
-
-
     prompt = (
-
         f"You are a Senior Copywriter for '{data.cafe_name}'. {mood_instr}\n"
-
         f"Language: {data.language}. Context: {data.weather} weather, {data.time}. Audience: {target}.\n"
-
         f"Strategy: {trigger}{event_ctx}\n\n"
-
         
-
         f"TASK: Write EXACTLY {count} Instagram post(s). No intro, no conversational filler.\n\n"
-
         
-
         "STRICT FORMATTING RULES (MANDATORY):\n"
-
         "For EACH post, use this EXACT structure:\n"
-
         "[Write the caption here] | [Write the photo description here]\n"
-
         "--- (Separator only between posts)\n\n"
-
         
-
         "EXAMPLE:\n"
-
         "Best coffee in town! | A close-up shot of a latte with heart art.\n"
-
         
-
         "CONSTRAINTS:\n"
-
         "- Use sensory marketing: describe smells, sounds, and textures.\n"
-
         "- No 'whispering winds' or 'dancing shadows' unless in Poetic mood.\n"
-
         "- Max 2 emojis per post.\n"
-
         f"- Output strictly in {data.language}."
-
     )
-
     return prompt
 
 # --- ENDPOINTS ---
