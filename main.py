@@ -136,7 +136,7 @@ async def get_logo():
 def get_credits(email: str, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == email).first()
     if not user:
-        user = User(email=email, credits=3, is_premium=False)
+        user = User(email=email, credits=7, is_premium=False)
         db.add(user); db.commit(); db.refresh(user)
     return {"credits": user.credits, "is_premium": user.is_premium}
 
@@ -210,15 +210,23 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db), stripe
     except:
         raise HTTPException(status_code=400)
 
-    if event["type"] == "checkout.session.completed":
-        session = event["data"]["object"]
-        email = session.get("customer_email")
-        if email:
-            user = db.query(User).filter(User.email == email).first()
-            if user:
-                user.is_premium = True
-                user.credits += 50
-                db.commit()
+   if event["type"] == "checkout.session.completed":
+    session = event["data"]["object"]
+    email = session.get("customer_email")
+    amount = session.get("amount_total") # Сумма в центах
+
+    if email:
+        user = db.query(User).filter(User.email == email).first()
+        if user:
+            user.is_premium = True
+            # Начисляем согласно тарифу
+            if amount == 900:    # $9.00
+                user.credits += 30
+            elif amount == 8000: # $80.00
+                user.credits += 365
+            else:
+                user.credits += 50 # Запасной вариант
+            db.commit()
     return {"status": "ok"}
 
 @app.get("/", response_class=HTMLResponse)
