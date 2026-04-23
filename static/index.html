@@ -158,11 +158,11 @@
 </div>
 
 <div class="sheet" id="priceSheet">
-    <h3 style="text-align:center; font-family: 'Fraunces', serif; margin-top: 0;">The Coffee Menu</h3>
-    <p style="text-align:center; font-size: 13px; margin-bottom: 25px;">You're out of beans! Top up to keep brewing.</p>
+    <h3 style="text-align:center; font-family: 'Fraunces', serif; margin-top: 0;">Coffee Menu</h3>
+    <p style="text-align:center; font-size: 13px; margin-bottom: 25px;">You're out of beans! Choose your plan:</p>
     
-    <button class="btn-main" onclick="buy('single')" style="margin-bottom:12px;">$5 — 50 Credits</button>
-    <button class="btn-premium" onclick="buy('monthly')">$15/mo — Unlimited Access</button>
+    <button class="btn-main" onclick="buy('monthly')" style="margin-bottom:12px;">$9 — 30 Credits / Mo</button>
+    <button class="btn-premium" onclick="buy('yearly')">$80 — 365 Credits / Year</button>
     
     <button class="btn-sub" onclick="togglePriceSheet(false)" style="width:100%; margin-top: 15px;">Maybe later</button>
 </div>
@@ -335,19 +335,31 @@ async function updateUI() {
 }
 
 async function buy(plan) {
+    // 1. Проверяем, залогинен ли пользователь через Supabase
     const { data: { user } } = await _supabase.auth.getUser();
+    
+    // 2. Если нет — отправляем на логин
     if (!user) return loginWithGoogle();
 
+    // 3. Отправляем запрос на твой сервер (Python)
+    // Мы передаем только email и название плана ("monthly" или "yearly")
     const res = await fetch('/create-checkout-session', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ email: user.email, plan: plan })
+        body: JSON.stringify({ 
+            email: user.email, 
+            plan: plan 
+        })
     });
+
     const session = await res.json();
+
+    // 4. Если сервер прислал ссылку на оплату Stripe — переходим по ней
     if (session.url) {
         window.location.href = session.url;
     } else {
-        alert("Payment error: " + session.error);
+        // Если что-то пошло не так (например, ошибка ключей API)
+        alert("Payment error: " + (session.error || "Unknown error"));
     }
 }
 
