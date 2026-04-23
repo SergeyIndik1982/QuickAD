@@ -169,10 +169,12 @@ async def generate(data: GenerateRequest, db: Session = Depends(get_db)):
             content = response.json()["choices"][0]["message"]["content"]
             results = [text.strip() for text in content.split('---') if text.strip()]
 
-            if results:
-                if not user.is_premium:
-                    user.credits -= 1
-                    db.commit()
+         if results:
+    if not user.is_premium:
+        # Если заказано 7 вариантов (неделя), списываем 7, иначе 1
+        cost = 7 if data.variants == 7 else 1
+        user.credits -= cost
+        db.commit()
                 return {"texts": results, "remaining_credits": user.credits}
             
             return {"error": "Failed to parse AI response"}
