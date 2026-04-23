@@ -184,15 +184,21 @@ async def generate(data: GenerateRequest, db: Session = Depends(get_db)):
 @app.post("/create-checkout-session")
 async def create_checkout_session(data: CheckoutRequest):
     DOMAIN = os.getenv("BASE_URL", "https://cafecaption.com")
+    
+    # Новая логика цен: $9 за месяц, $80 за год
+    price_amount = 900 if data.plan == "monthly" else 8000
+    # Годовой план — это обычно разовый платеж ('payment'), а не подписка
+    mode = "subscription" if data.plan == "monthly" else "payment"
+    
     try:
         session = stripe.checkout.Session.create(
-            mode="subscription" if data.plan == "monthly" else "payment",
+            mode=mode,
             customer_email=data.email,
             line_items=[{
                 "price_data": {
                     "currency": "usd",
-                    "product_data": {"name": "Cafe Content Pro"},
-                    "unit_amount": 1500 if data.plan == "monthly" else 500,
+                    "product_data": {"name": f"Cafe Content {'Monthly' if data.plan == 'monthly' else 'Yearly'}"},
+                    "unit_amount": price_amount,
                     "recurring": {"interval": "month"} if data.plan == "monthly" else None,
                 },
                 "quantity": 1,
