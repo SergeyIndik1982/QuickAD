@@ -143,9 +143,10 @@ def get_credits(email: str, db: Session = Depends(get_db)):
 @app.post("/generate")
 async def generate(data: GenerateRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == data.email).first()
-    if not user:
-        user = User(email=data.email, is_premium=False, credits=3)
-        db.add(user); db.commit(); db.refresh(user)
+ # В начале @app.post("/generate")
+if not user:
+    user = User(email=data.email, is_premium=False, credits=7) # Поставь 7 здесь
+    db.add(user); db.commit(); db.refresh(user)
     
     if not user.is_premium and user.credits <= 0:
         return {"error": "credits_depleted"}
