@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Cafe Caption</title>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@300;600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
-   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-   <style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
         :root { --bg: #F8F5F2; --accent: #A39184; --text: #4A443F; --border: #E8E2DC; }
         body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
         .app { width: 100%; max-width: 420px; }
@@ -18,10 +18,6 @@
 
         .card { background: white; padding: 24px; border-radius: 24px; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.02); margin-bottom: 20px; }
         label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; color: #8C7B6F; display: block; margin-bottom: 10px; }
-        
-        .lang-bar { display: flex; gap: 15px; overflow-x: auto; padding-bottom: 12px; border-bottom: 1px solid #F1EFEF; margin-bottom: 20px; }
-        .lang { font-size: 11px; opacity: 0.4; cursor: pointer; font-weight: 600; }
-        .lang.active { opacity: 1; color: var(--accent); border-bottom: 2px solid var(--accent); }
         
         input { width: 100%; padding: 14px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 15px; font-family: inherit; font-size: 14px; box-sizing: border-box; outline: none; }
         
@@ -39,38 +35,25 @@
         
         .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.25); display: none; z-index: 999; backdrop-filter: blur(8px); }
 
-       .receipt { 
-    background: white; 
-    padding: 30px 25px; 
-    font-family: 'Courier New', monospace; 
-    margin-bottom: 20px; 
-    border-bottom: 2px dashed var(--border); 
-       }
-           .content-to-copy {
-    font-size: 14px;
-    line-height: 1.5;
-    color: #333;
-    margin-bottom: 15px;
-}
-       .photo-tip { 
-    margin-top: 20px; 
-    font-size: 12px; 
-    color: #777; 
-    border-top: 1px solid #eee; 
-    padding-top: 15px; 
-    font-style: italic; 
-    font-family: 'Inter', sans-serif; 
-    line-height: 1.4;
-}
+        .receipt { background: white; padding: 30px 25px; font-family: 'Courier New', monospace; margin-bottom: 20px; border-bottom: 2px dashed var(--border); }
+        .content-to-copy { font-size: 14px; line-height: 1.5; color: #333; margin-bottom: 15px; }
+        .photo-tip { margin-top: 20px; font-size: 12px; color: #777; border-top: 1px solid #eee; padding-top: 15px; font-style: italic; font-family: 'Inter', sans-serif; line-height: 1.4; }
 
-        
         .actions { display: flex; gap: 10px; margin-top: 20px; }
         .action-btn { flex: 1; padding: 14px; border-radius: 14px; font-size: 12px; font-weight: 600; font-family: 'Inter', sans-serif; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; border: none; transition: 0.2s; }
-        .action-btn:active { transform: scale(0.96); }
         .btn-copy { background: #F1EFEF; color: var(--text); }
         .btn-instagram { background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); color: white; text-decoration: none; }
+
+        /* MODAL STYLES */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(8px); z-index: 2000; align-items: center; justify-content: center; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; padding: 30px; border-radius: 15px; width: 90%; max-width: 600px; max-height: 80vh; position: relative; display: flex; flex-direction: column; }
+        .modal-scroll-area { overflow-y: auto; margin-top: 15px; line-height: 1.6; font-size: 14px; }
+        .close-button { position: absolute; top: 15px; right: 20px; font-size: 28px; cursor: pointer; color: #999; }
+        .btn-close { margin-top: 20px; padding: 10px 25px; background: var(--accent); color: white; border: none; border-radius: 20px; cursor: pointer; align-self: center; }
+        .footer { margin-top: 30px; text-align: center; font-size: 10px; }
+        .footer a { color: var(--accent); text-decoration: none; margin: 0 10px; text-transform: uppercase; letter-spacing: 1px; }
     </style>
-    
 </head>
 <body>
 
@@ -80,13 +63,11 @@
         <h1>Cafe <span>Caption</span></h1>
     </header>
     
-    <div id="user-info" style="display: none; margin-bottom: 15px; font-size: 12px; color: var(--accent);">
+    <div id="user-info" style="display: none; margin-bottom: 15px; font-size: 12px; color: var(--accent); text-align: center;">
         <span id="display-email"></span> | <span id="user-credits"></span>
     </div>
 
     <div class="card">
-        
-
         <label>Cafe Name</label>
         <input type="text" id="name" placeholder="Name of your space..." oninput="localStorage.setItem('name', this.value)">
 
@@ -98,12 +79,12 @@
         </div>
 
         <label>Target Audience</label>
-    <div class="segments" id="target-segments">
-    <div class="seg active" onclick="setV('target','Freelancers',this)">💻 Pros</div>
-    <div class="seg" onclick="setV('target','Couples',this)">👩‍❤️‍👨 Date</div>
-    <div class="seg" onclick="setV('target','Coffee Geeks',this)">☕️ Geeks</div>
-    <div class="seg" onclick="setV('target','Families',this)">🧸 Family</div>
-     </div>
+        <div class="segments">
+            <div class="seg active" onclick="setV('target','Freelancers',this)">💻 Pros</div>
+            <div class="seg" onclick="setV('target','Couples',this)">👩‍❤️‍👨 Date</div>
+            <div class="seg" onclick="setV('target','Coffee Geeks',this)">☕️ Geeks</div>
+            <div class="seg" onclick="setV('target','Families',this)">🧸 Family</div>
+        </div>
        
         <label>Focus</label>
         <div class="segments">
@@ -113,42 +94,47 @@
             <div class="seg" onclick="setV('goal','People',this)">People</div>
             <div class="seg" onclick="setV('goal','Daily',this)">Daily</div>
         </div>
+
         <div style="text-align: center; margin-bottom: 15px;">
-    <span onclick="document.getElementById('adv-settings').style.display = (document.getElementById('adv-settings').style.display === 'none' ? 'block' : 'none')" 
-          style="font-size: 11px; color: var(--accent); cursor: pointer; border-bottom: 1px dashed var(--accent);">
-        ⚙️ Advanced Settings
-    </span>
-</div>
-
-<div id="adv-settings" style="display: none; margin-bottom: 20px; padding: 15px; background: #f9f9f9; border-radius: 12px;">
-   <label>Language</label>
-        <div class="segments" style="margin-bottom: 15px;">
-            <div class="seg active" onclick="setV('lang','English',this)">EN</div>
-            <div class="seg" onclick="setV('lang','German',this)">DE</div>
-            <div class="seg" onclick="setV('lang','French',this)">FR</div>
-            <div class="seg" onclick="setV('lang','Italian',this)">IT</div>
-            <div class="seg" onclick="setV('lang','Russian',this)">RU</div>
+            <span onclick="document.getElementById('adv-settings').style.display = (document.getElementById('adv-settings').style.display === 'none' ? 'block' : 'none')" 
+                  style="font-size: 11px; color: var(--accent); cursor: pointer; border-bottom: 1px dashed var(--accent);">
+                ⚙️ Advanced Settings
+            </span>
         </div>
-    <label>Weather</label>
-    <div class="segments">
-        <div class="seg active" onclick="setV('weather','Random',this)">Auto</div>
-        <div class="seg" onclick="setV('weather','Sunny',this)">Sunny</div>
-        <div class="seg" onclick="setV('weather','Rainy',this)">Rainy</div>
-    </div>
 
-    <label>Time of Day</label>
-    <div class="segments">
-        <div class="seg active" onclick="setV('time','Random',this)">Auto</div>
-        <div class="seg" onclick="setV('time','Morning',this)">Morning</div>
-        <div class="seg" onclick="setV('time','Evening',this)">Evening</div>
-    </div>
+        <div id="adv-settings" style="display: none; margin-bottom: 20px; padding: 15px; background: #f9f9f9; border-radius: 12px;">
+            <label>Language</label>
+            <div class="segments">
+                <div class="seg active" onclick="setV('lang','English',this)">EN</div>
+                <div class="seg" onclick="setV('lang','German',this)">DE</div>
+                <div class="seg" onclick="setV('lang','French',this)">FR</div>
+                <div class="seg" onclick="setV('lang','Russian',this)">RU</div>
+            </div>
+            <label>Weather</label>
+            <div class="segments">
+                <div class="seg active" onclick="setV('weather','Random',this)">Auto</div>
+                <div class="seg" onclick="setV('weather','Sunny',this)">Sunny</div>
+                <div class="seg" onclick="setV('weather','Rainy',this)">Rainy</div>
+            </div>
+            <label>Time</label>
+            <div class="segments">
+                <div class="seg active" onclick="setV('time','Random',this)">Auto</div>
+                <div class="seg" onclick="setV('time','Morning',this)">Morning</div>
+                <div class="seg" onclick="setV('time','Evening',this)">Evening</div>
+            </div>
+            <label>Event (Optional)</label>
+            <input type="text" id="event" placeholder="e.g. 1+1 on Latte..." oninput="state.event = this.value">
+        </div>
 
-    <label>Special Offer / Event (Optional)</label>
-<input type="text" id="event" placeholder="e.g. 1+1 on Latte, Jazz Night..." oninput="state.event = this.value">
-</div>
         <button class="btn-main" id="go" onclick="brew()">Brew Content</button>
         <button class="btn-premium" id="go-week" onclick="brewWeek()">✨ Week Generator (7 Posts)</button>
     </div>
+
+    <footer class="footer">
+        <a href="javascript:void(0)" onclick="openModal('privacy')">Privacy Policy</a>
+        <a href="javascript:void(0)" onclick="openModal('terms')">Terms of Service</a>
+        <a href="javascript:void(0)" onclick="openModal('refund')">Refund Policy</a>
+    </footer>
 </div>
 
 <div class="overlay" id="blur" onclick="toggleAll()"></div>
@@ -160,77 +146,65 @@
 <div class="sheet" id="priceSheet">
     <h3 style="text-align:center; font-family: 'Fraunces', serif; margin-top: 0;">Coffee Menu</h3>
     <p style="text-align:center; font-size: 13px; margin-bottom: 25px;">You're out of beans! Choose your plan:</p>
-    
     <button class="btn-main" onclick="buy('monthly')" style="margin-bottom:12px;">$9 — 30 Credits / Mo</button>
     <button class="btn-premium" onclick="buy('yearly')">$80 — 365 Credits / Year</button>
-    
     <button class="btn-sub" onclick="togglePriceSheet(false)" style="width:100%; margin-top: 15px;">Maybe later</button> 
-
-    <footer class="footer">
-    <a href="javascript:void(0)" onclick="openModal('privacy')">Privacy Policy</a>
-    <a href="javascript:void(0)" onclick="openModal('terms')">Terms of Service</a>
-    <a href="javascript:void(0)" onclick="openModal('refund')">Refund Policy</a>
-    </footer>
+</div>
 
 <div id="legalModal" class="modal-overlay">
     <div class="modal-content">
         <span class="close-button" onclick="closeModal()">&times;</span>
-        <h2 id="modalTitle">Заголовок</h2>
-        <hr>
-        <div id="modalBody" class="modal-scroll-area">
-            </div>
-        <div class="modal-footer">
-            <button onclick="closeModal()" class="btn-close">Close</button>
-        </div>
-  
-</div>
-    
+        <h2 id="modalTitle" style="font-family: 'Fraunces', serif; margin: 0;"></h2>
+        <div id="modalBody" class="modal-scroll-area"></div>
+        <button onclick="closeModal()" class="btn-close">Close</button>
+    </div>
 </div>
 
 <script>
 const _supabase = supabase.createClient('https://fhfxpwgqnwnlafekmmrm.supabase.co', 'sb_publishable_0pLQ3vw_4N55UL-XCiytmA_Jl0HkYEh');
 
-// ИСПРАВЛЕНО: Добавлены запятые в объекте state
-let state = { 
-    lang: 'English', 
-    mood: 'Poetic', 
-    goal: 'Atmosphere', 
-    target: 'Freelancers', // Это должно совпадать с классом "active" в HTML
-    weather: 'Random',
-    time: 'Random' 
+let state = { lang: 'English', mood: 'Poetic', goal: 'Atmosphere', target: 'Freelancers', weather: 'Random', time: 'Random', event: '' };
+
+const legalTexts = {
+    privacy: { title: "Privacy Policy", content: "<p>We respect your privacy. We only collect your email via Google Login to manage your credits. We do not sell your data to third parties.</p>" },
+    terms: { title: "Terms of Service", content: "<p>By using CafeCaption, you agree to consume credits for AI-generated content. All generated texts are suggestions; we are not responsible for final brand communication.</p>" },
+    refund: { title: "Refund Policy", content: "<p>Since credits provide immediate access to digital generation, we do not offer refunds once credits are consumed. Contact us for technical errors.</p>" }
 };
+
+function openModal(type) {
+    const modal = document.getElementById('legalModal');
+    document.getElementById('modalTitle').innerText = legalTexts[type].title;
+    document.getElementById('modalBody').innerHTML = legalTexts[type].content;
+    modal.classList.add('active');
+}
+
+function closeModal() {
+    document.getElementById('legalModal').classList.remove('active');
+}
+
 async function brew() {
     const { data: { user } } = await _supabase.auth.getUser();
-    
     if (!user) {
         localStorage.setItem('temp_name', document.getElementById('name').value);
         localStorage.setItem('auto_brew', 'true');
         return loginWithGoogle();
     }
+    executeGeneration(user.email, 1);
+}
 
-    try {
-        const res = await fetch(`/get-credits?email=${user.email}`);
-        const profile = await res.json();
-
-        if (!profile.is_premium && profile.credits <= 0) {
-            return togglePriceSheet(true);
-        }
-        executeGeneration(user.email);
-    } catch (e) {
-        console.error("Auth check failed", e);
-    }
+async function brewWeek() {
+    const { data: { user } } = await _supabase.auth.getUser();
+    if (!user) return loginWithGoogle();
+    executeGeneration(user.email, 7);
 }
 
 async function loginWithGoogle() {
-    await _supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: 'https://cafecaption.com' } // Указываем явно
-    });
+    await _supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
 }
 
-async function executeGeneration(email) {
-    const nameInput = document.getElementById('name');
-    const btn = document.getElementById('go');
+async function executeGeneration(email, count) {
+    const btn = count === 7 ? document.getElementById('go-week') : document.getElementById('go');
+    const originalText = btn.innerText;
     btn.innerText = "Steeping...";
     btn.disabled = true;
 
@@ -239,87 +213,50 @@ async function executeGeneration(email) {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
-    email: email,
-    cafe_name: nameInput.value,
-    language: state.lang,
-    mood: state.mood,
-    target: state.target,
-    goal: state.goal,
-    weather: state.weather,
-    time: state.time,
-    variants: 1 
-})
+                email: email,
+                cafe_name: document.getElementById('name').value,
+                language: state.lang,
+                mood: state.mood,
+                target: state.target,
+                goal: state.goal,
+                weather: state.weather,
+                time: state.time,
+                event: state.event,
+                variants: count
+            })
         });
-        
         const data = await res.json();
-        
-        if (data.error === "credits_depleted") {
-            return togglePriceSheet(true);
-        } else if (data.error) {
-            return alert(data.error);
-        }
+        if (data.error === "credits_depleted") return togglePriceSheet(true);
+        if (data.error) return alert(data.error);
 
         renderResults(data.texts);
-        if (data.remaining_credits !== undefined) {
-            document.getElementById('user-credits').innerText = data.remaining_credits + ' credits';
-        }
+        updateUI();
     } catch (e) {
-        alert("Connection error to Python server");
+        alert("Error connecting to server");
     } finally {
-        btn.innerText = "Brew Content";
+        btn.innerText = originalText;
         btn.disabled = false;
     }
 }
 
-// Отрисовка результатов: разделяем пост и сценарий фото
 function renderResults(texts) {
     let html = '';
     texts.forEach((text, index) => {
-        // AI обычно выдает текст в формате "Пост | Фото"
         const parts = text.split('|');
         const caption = parts[0] ? parts[0].trim() : text;
-        const photo = parts[1] ? parts[1].trim() : "Aesthetic cafe shot";
-        
-        html += `
-            <div class="receipt">
-                <div class="content-to-copy" id="post-text-${index}">${caption}</div>
-                
-                <div class="actions">
-                    <button class="action-btn btn-copy" onclick="copyOnlyPost('post-text-${index}', this)">📋 COPY POST</button>
-                    <button class="action-btn btn-instagram" onclick="window.open('https://instagram.com')">📸 IG</button>
-                </div>
-
-                <div class="photo-tip">
-                    <strong style="display:block; margin-bottom:4px; color:var(--accent); font-size:10px; font-family: 'Inter', sans-serif;">
-                        📸 PHOTO DIRECTION:
-                    </strong>
-                    ${photo}
-                </div>
-            </div>`;
+        const photo = parts[1] ? parts[1].trim() : "Aesthetic shot of details";
+        html += `<div class="receipt"><div class="content-to-copy" id="post-${index}">${caption}</div><div class="actions"><button class="action-btn btn-copy" onclick="copyText('post-${index}', this)">📋 COPY</button><button class="action-btn btn-instagram" onclick="window.open('https://instagram.com')">📸 IG</button></div><div class="photo-tip"><strong>📸 PHOTO:</strong> ${photo}</div></div>`;
     });
     document.getElementById('results-container').innerHTML = html;
     toggleSheet(true);
 }
 
-// Функция копирования только текста поста
-function copyOnlyPost(elementId, btn) {
-    const textToCopy = document.getElementById(elementId).innerText;
-    
-    navigator.clipboard.writeText(textToCopy).then(() => {
-        const originalText = btn.innerHTML;
-        btn.innerText = "COPIED! ✅";
-        btn.style.background = "#A39184";
-        btn.style.color = "white";
-        
-        setTimeout(() => {
-            btn.innerHTML = originalText;
-            btn.style.background = "#F1EFEF";
-            btn.style.color = "var(--text)";
-        }, 2000);
-    }).catch(err => {
-        console.error('Ошибка копирования: ', err);
+function copyText(id, btn) {
+    navigator.clipboard.writeText(document.getElementById(id).innerText).then(() => {
+        const old = btn.innerText; btn.innerText = "COPIED!"; setTimeout(() => btn.innerText = old, 2000);
     });
 }
+
 function toggleSheet(show) {
     document.getElementById('resultSheet').classList.toggle('active', show);
     document.getElementById('blur').style.display = show ? 'block' : 'none';
@@ -330,10 +267,7 @@ function togglePriceSheet(show) {
     document.getElementById('blur').style.display = show ? 'block' : 'none';
 }
 
-function toggleAll() {
-    toggleSheet(false);
-    togglePriceSheet(false);
-}
+function toggleAll() { toggleSheet(false); togglePriceSheet(false); closeModal(); }
 
 function setV(k, v, el) {
     state[k] = v;
@@ -344,95 +278,30 @@ function setV(k, v, el) {
 async function updateUI() {
     const { data: { user } } = await _supabase.auth.getUser();
     if (user) {
-        try {
-            const res = await fetch(`/get-credits?email=${user.email}`);
-            const data = await res.json();
-            document.getElementById('user-info').style.display = 'block';
-            document.getElementById('display-email').innerText = user.email.split('@')[0];
-            document.getElementById('user-credits').innerText = data.credits + ' credits';
-        } catch(e) {}
+        const res = await fetch(`/get-credits?email=${user.email}`);
+        const data = await res.json();
+        document.getElementById('user-info').style.display = 'block';
+        document.getElementById('display-email').innerText = user.email.split('@')[0];
+        document.getElementById('user-credits').innerText = data.credits + ' credits';
     }
 }
 
 async function buy(plan) {
-    // 1. Проверяем, залогинен ли пользователь через Supabase
     const { data: { user } } = await _supabase.auth.getUser();
-    
-    // 2. Если нет — отправляем на логин
     if (!user) return loginWithGoogle();
-
-    // 3. Отправляем запрос на твой сервер (Python)
-    // Мы передаем только email и название плана ("monthly" или "yearly")
     const res = await fetch('/create-checkout-session', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ 
-            email: user.email, 
-            plan: plan 
-        })
+        body: JSON.stringify({ email: user.email, plan: plan })
     });
-
     const session = await res.json();
-
-    // 4. Если сервер прислал ссылку на оплату Stripe — переходим по ней
-    if (session.url) {
-        window.location.href = session.url;
-    } else {
-        // Если что-то пошло не так (например, ошибка ключей API)
-        alert("Payment error: " + (session.error || "Unknown error"));
-    }
+    if (session.url) window.location.href = session.url;
 }
 
-window.onload = async () => {
+window.onload = () => {
     document.getElementById('name').value = localStorage.getItem('name') || '';
-    const { data: { user } } = await _supabase.auth.getUser();
-    if (user) {
-        updateUI();
-        if (localStorage.getItem('auto_brew') === 'true') {
-            localStorage.removeItem('auto_brew');
-            brew();
-        }
-    }
+    updateUI();
 };
-
-async function brewWeek() {
-    const { data: { user } } = await _supabase.auth.getUser();
-    if (!user) return loginWithGoogle();
-
-    const nameInput = document.getElementById('name');
-    const btn = document.getElementById('go-week');
-    btn.innerText = "Roasting...";
-    btn.disabled = true;
-
-    try {
-        const res = await fetch('/generate', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                email: user.email,
-                cafe_name: nameInput.value,
-                language: state.lang,
-                mood: state.mood,
-                target: state.target,
-                goal: state.goal,
-                weather: state.weather,
-                time: state.time, // ИСПРАВЛЕНО: добавлена запятая
-                variants: 7 
-            })
-        });
-        const data = await res.json();
-        if (data.error === "credits_depleted") return togglePriceSheet(true);
-        renderResults(data.texts);
-        if (data.remaining_credits !== undefined) {
-            document.getElementById('user-credits').innerText = data.remaining_credits + ' credits';
-        }
-    } catch (e) {
-        alert("Error brewing week");
-    } finally {
-        btn.innerText = "✨ Week Generator (7 Posts)";
-        btn.disabled = false;
-    }
-}
 </script>
 </body>
 </html>
