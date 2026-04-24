@@ -166,10 +166,33 @@ const _supabase = supabase.createClient('https://fhfxpwgqnwnlafekmmrm.supabase.c
 let state = { lang: 'English', mood: 'Poetic', goal: 'Atmosphere', target: 'Freelancers', weather: 'Random', time: 'Random', event: '' };
 
 const legalTexts = {
-    privacy: { title: "Privacy Policy", content: "<p>We respect your privacy. We only collect your email via Google Login to manage your credits. We do not sell your data to third parties.</p>" },
-    terms: { title: "Terms of Service", content: "<p>By using CafeCaption, you agree to consume credits for AI-generated content. All generated texts are suggestions; we are not responsible for final brand communication.</p>" },
-    refund: { title: "Refund Policy", content: "<p>Since credits provide immediate access to digital generation, we do not offer refunds once credits are consumed. Contact us for technical errors.</p>" }
-};
+    privacy: { 
+        title: "Privacy Policy", 
+        content: `
+            <p><strong>1. Data Collection:</strong> We collect your email via Google OAuth to manage your account and credits.</p>
+            <p><strong>2. Payments:</strong> Transactions are handled by Stripe. We do not store your credit card details.</p>
+            <p><strong>3. AI Training:</strong> We save your "liked" posts to improve the AI model's understanding of your brand voice, ensuring personalized content over time.</p>
+            <p><strong>4. Third Parties:</strong> Your prompts are processed by OpenAI/Groq. No personal identity is shared with these providers.</p>
+        ` 
+    },
+    terms: { 
+        title: "Terms of Service", 
+        content: `
+            <p><strong>1. Service:</strong> Cafe Caption provides AI-generated ideas and captions for social media.</p>
+            <p><strong>2. Subscriptions:</strong> "Monthly Brew" and "Annual Master" are recurring subscriptions. You can cancel anytime in your profile.</p>
+            <p><strong>3. Credits:</strong> 1 generation = 1 credit. 7-day trial credits are for new users only.</p>
+            <p><strong>4. Content Ownership:</strong> You own the generated content. Cafe Caption is not liable for how these posts perform or any business impact.</p>
+        ` 
+    },
+    refund: { 
+        title: "Refund Policy", 
+        content: `
+            <p><strong>1. Digital Nature:</strong> Since our service provides immediate digital content via AI, we generally do not offer refunds once credits have been used.</p>
+            <p><strong>2. Free Trial:</strong> We provide 7 free credits so you can test the quality before purchasing.</p>
+            <p><strong>3. Exceptions:</strong> If you experience technical failure where credits were deducted but no content was shown, contact us for a manual credit top-up.</p>
+        ` 
+    }
+};;
 
 function openModal(type) {
     const modal = document.getElementById('legalModal');
