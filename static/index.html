@@ -164,7 +164,27 @@
     <button class="btn-main" onclick="buy('monthly')" style="margin-bottom:12px;">$9 — 30 Credits / Mo</button>
     <button class="btn-premium" onclick="buy('yearly')">$80 — 365 Credits / Year</button>
     
-    <button class="btn-sub" onclick="togglePriceSheet(false)" style="width:100%; margin-top: 15px;">Maybe later</button>
+    <button class="btn-sub" onclick="togglePriceSheet(false)" style="width:100%; margin-top: 15px;">Maybe later</button> 
+
+    <footer class="footer">
+    <a href="javascript:void(0)" onclick="openModal('privacy')">Privacy Policy</a>
+    <a href="javascript:void(0)" onclick="openModal('terms')">Terms of Service</a>
+    <a href="javascript:void(0)" onclick="openModal('refund')">Refund Policy</a>
+    </footer>
+
+<div id="legalModal" class="modal-overlay">
+    <div class="modal-content">
+        <span class="close-button" onclick="closeModal()">&times;</span>
+        <h2 id="modalTitle">Заголовок</h2>
+        <hr>
+        <div id="modalBody" class="modal-scroll-area">
+            </div>
+        <div class="modal-footer">
+            <button onclick="closeModal()" class="btn-close">Close</button>
+        </div>
+  
+</div>
+    
 </div>
 
 <script>
