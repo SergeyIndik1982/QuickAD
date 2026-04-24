@@ -4,7 +4,7 @@ import stripe
 import asyncio
 from fastapi import FastAPI, Request, Header, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Column, String, Boolean, Integer
@@ -26,7 +26,7 @@ class User(Base):
     __tablename__ = "users"
     email = Column(String, primary_key=True, index=True)
     is_premium = Column(Boolean, default=False)
-    credits = Column(Integer, default=3)
+    credits = Column(Integer, default=7)
 
 Base.metadata.create_all(bind=engine)
 
@@ -41,7 +41,7 @@ STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
 stripe.api_key = STRIPE_SECRET_KEY
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
-# --- MODELS & UTILS ---
+# --- MODELS ---
 class GenerateRequest(BaseModel):
     email: str
     cafe_name: str
@@ -51,7 +51,7 @@ class GenerateRequest(BaseModel):
     target: str = "General"
     weather: str = "Random"
     time: str = "Random"
-    event: str = ""  # Добавили значение по умолчанию (пустая строка)
+    event: str = ""
     variants: int = 1
 
 class CheckoutRequest(BaseModel):
@@ -78,7 +78,6 @@ def build_prompt(data):
         "General": "Focus on urban sanctuary vibes and high-quality hospitality."
     }
 
-    # Исправленная логика настроения
     if data.mood.lower() in ["witty", "остроумный", "шутливый"]:
         mood_instr = (
             "Tone: Witty. Use the 'Expectation vs Reality' trope. "
@@ -86,27 +85,22 @@ def build_prompt(data):
             "Be a bit edgy. Avoid 'we are here for you' – instead use 'we have the caffeine you clearly need'."
         )
     else:
-        # Стандартное поведение для других настроений
         mood_instr = f"Tone: {data.mood}. Style: Professional and engaging."
 
     trigger = audience_triggers.get(target, audience_triggers["General"])
     event_ctx = f"\n### PROMO EVENT (MUST INTEGRATE): {event}" if event.strip() else ""
 
-    prompt = (
+    return (
         f"You are a Senior Copywriter for '{data.cafe_name}'. {mood_instr}\n"
         f"Language: {data.language}. Context: {data.weather} weather, {data.time}. Audience: {target}.\n"
         f"Strategy: {trigger}{event_ctx}\n\n"
-        
         f"TASK: Write EXACTLY {count} Instagram post(s). No intro, no conversational filler.\n\n"
-        
         "STRICT FORMATTING RULES (MANDATORY):\n"
         "For EACH post, use this EXACT structure:\n"
         "[Write the caption here] | [Write the photo description here]\n"
         "--- (Separator only between posts)\n\n"
-        
         "EXAMPLE:\n"
-        "Best coffee in town! | A close-up shot of a latte with heart art.\n"
-        
+        "Best coffee in town! | A close-up shot of a latte with heart art.\n\n"
         "CONSTRAINTS:\n"
         "- Use sensory marketing: describe smells, sounds, and textures (e.g., the click of a portafilter, the velvet of microfoam).\n"
         "- BANNED WORDS: 'delicious', 'cozy', 'best', 'welcome'. Use precise sensory descriptors instead.\n"
@@ -115,22 +109,15 @@ def build_prompt(data):
         "- Max 2 emojis per post.\n"
         f"- Output strictly in {data.language}."
     )
-    return prompt
 
 # --- ENDPOINTS ---
+
 @app.get("/logo.png")
 async def get_logo():
-    # Ищем файл в корне проекта
-    file_path = "logo.png"
-    if os.path.exists(file_path):
-        return FileResponse(file_path, media_type="image/png")
-    
-    # Если не нашли в корне, попробуем в папке static
-    static_path = os.path.join("static", "logo.png")
-    if os.path.exists(static_path):
-        return FileResponse(static_path, media_type="image/png")
-        
-    return {"error": "File not found"}
+    for path in ["logo.png", "static/logo.png"]:
+        if os.path.exists(path):
+            return FileResponse(path, media_type="image/png")
+    return {"error": "Logo not found"}
 
 @app.get("/get-credits")
 def get_credits(email: str, db: Session = Depends(get_db)):
@@ -143,12 +130,12 @@ def get_credits(email: str, db: Session = Depends(get_db)):
 @app.post("/generate")
 async def generate(data: GenerateRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == data.email).first()
- # В начале @app.post("/generate")
-if not user:
-    user = User(email=data.email, is_premium=False, credits=7) # Поставь 7 здесь
-    db.add(user); db.commit(); db.refresh(user)
+    if not user:
+        user = User(email=data.email, is_premium=False, credits=7)
+        db.add(user); db.commit(); db.refresh(user)
     
-    if not user.is_premium and user.credits <= 0:
+    cost = 7 if data.variants == 7 else 1
+    if not user.is_premium and user.credits < cost:
         return {"error": "credits_depleted"}
 
     async with httpx.AsyncClient() as client:
@@ -170,25 +157,20 @@ if not user:
             content = response.json()["choices"][0]["message"]["content"]
             results = [text.strip() for text in content.split('---') if text.strip()]
 
-         if results:
-    if not user.is_premium:
-        # Если заказано 7 вариантов (неделя), списываем 7, иначе 1
-        cost = 7 if data.variants == 7 else 1
-        user.credits -= cost
-        db.commit()
+            if results:
+                if not user.is_premium:
+                    user.credits -= cost
+                    db.commit()
                 return {"texts": results, "remaining_credits": user.credits}
             
-            return {"error": "Failed to parse AI response"}
+            return {"error": "AI failed to generate results"}
         except Exception as e:
             return {"error": str(e)}
 
 @app.post("/create-checkout-session")
 async def create_checkout_session(data: CheckoutRequest):
     DOMAIN = os.getenv("BASE_URL", "https://cafecaption.com")
-    
-    # Новая логика цен: $9 за месяц, $80 за год
-    price_amount = 900 if data.plan == "monthly" else 8000
-    # Годовой план — это обычно разовый платеж ('payment'), а не подписка
+    amount = 900 if data.plan == "monthly" else 8000
     mode = "subscription" if data.plan == "monthly" else "payment"
     
     try:
@@ -198,9 +180,9 @@ async def create_checkout_session(data: CheckoutRequest):
             line_items=[{
                 "price_data": {
                     "currency": "usd",
-                    "product_data": {"name": f"Cafe Content {'Monthly' if data.plan == 'monthly' else 'Yearly'}"},
-                    "unit_amount": price_amount,
-                    "recurring": {"interval": "month"} if data.plan == "monthly" else None,
+                    "product_data": {"name": f"Cafe Content {data.plan.capitalize()}"},
+                    "unit_amount": amount,
+                    "recurring": {"interval": "month"} if mode == "subscription" else None,
                 },
                 "quantity": 1,
             }],
@@ -216,26 +198,21 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db), stripe
     payload = await request.body()
     try:
         event = stripe.Webhook.construct_event(payload, stripe_signature, STRIPE_WEBHOOK_SECRET)
-    except:
+    except Exception:
         raise HTTPException(status_code=400)
 
-   if event["type"] == "checkout.session.completed":
-    session = event["data"]["object"]
-    email = session.get("customer_email")
-    amount = session.get("amount_total") # Сумма в центах
+    if event["type"] == "checkout.session.completed":
+        session = event["data"]["object"]
+        email = session.get("customer_email")
+        amount = session.get("amount_total")
 
-    if email:
-        user = db.query(User).filter(User.email == email).first()
-        if user:
-            user.is_premium = True
-            # Начисляем согласно тарифу
-            if amount == 900:    # $9.00
-                user.credits += 30
-            elif amount == 8000: # $80.00
-                user.credits += 365
-            else:
-                user.credits += 50 # Запасной вариант
-            db.commit()
+        if email:
+            user = db.query(User).filter(User.email == email).first()
+            if user:
+                user.is_premium = True
+                if amount == 900: user.credits += 30
+                elif amount >= 8000: user.credits += 365
+                db.commit()
     return {"status": "ok"}
 
 @app.get("/", response_class=HTMLResponse)
@@ -243,5 +220,5 @@ def index():
     try:
         with open("static/index.html", "r", encoding="utf-8") as f:
             return f.read()
-    except:
-        return "Frontend file not found in /static folder"
+    except Exception:
+        return "Frontend index.html not found in /static"
