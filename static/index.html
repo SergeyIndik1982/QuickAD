@@ -1,1 +1,366 @@
+<!DOCTYPE html> 
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cafe Caption</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@300;600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root { --bg: #F8F5F2; --accent: #A39184; --text: #4A443F; --border: #E8E2DC; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .app { width: 100%; max-width: 420px; }
+        
+        header { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 25px; }
+        .logo-img { height: 42px; width: auto; display: block; }
+        header h1 { margin: 0; font-family: 'Fraunces', serif; font-size: 1.8rem; font-weight: 300; }
+        header span { color: var(--accent); font-weight: 600; }
 
+        .card { background: white; padding: 24px; border-radius: 24px; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.02); margin-bottom: 20px; }
+        label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; color: #8C7B6F; display: block; margin-bottom: 10px; }
+        
+        input { width: 100%; padding: 14px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 15px; font-family: inherit; font-size: 14px; box-sizing: border-box; outline: none; }
+        
+        .segments { display: flex; background: #F1EFEF; padding: 4px; border-radius: 12px; margin-bottom: 20px; }
+        .seg { flex: 1; text-align: center; padding: 10px; font-size: 11px; cursor: pointer; border-radius: 10px; color: #8E8883; font-weight: 600; }
+        .seg.active { background: white; color: var(--text); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        
+        button { width: 100%; padding: 18px; border-radius: 35px; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .btn-main { background: var(--accent); color: white; font-size: 17px; }
+        .btn-premium { background: #4A443F; color: white; font-size: 15px; margin-top: 10px; border: 1px solid var(--accent); }
+        .btn-sub { background: none; border: 1px solid var(--border); color: var(--accent); margin-top: 12px; font-size: 11px; text-transform: uppercase; }
+
+        .sheet { position: fixed; bottom: -100%; left: 0; right: 0; background: #F2F0ED; padding: 35px 20px 60px 20px; border-radius: 30px 30px 0 0; transition: 0.5s; z-index: 1000; max-height: 80vh; overflow-y: auto; }
+        .sheet.active { bottom: 0; }
+        
+        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.25); display: none; z-index: 999; backdrop-filter: blur(8px); }
+
+        .receipt { background: white; padding: 30px 25px; font-family: 'Courier New', monospace; margin-bottom: 20px; border-bottom: 2px dashed var(--border); }
+        .content-to-copy { font-size: 14px; line-height: 1.5; color: #333; margin-bottom: 15px; }
+        .photo-tip { margin-top: 20px; font-size: 12px; color: #777; border-top: 1px solid #eee; padding-top: 15px; font-style: italic; font-family: 'Inter', sans-serif; line-height: 1.4; }
+
+        .actions { display: flex; gap: 10px; margin-top: 20px; }
+        .action-btn { flex: 1; padding: 14px; border-radius: 14px; font-size: 12px; font-weight: 600; font-family: 'Inter', sans-serif; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; border: none; transition: 0.2s; }
+        .btn-copy { background: #F1EFEF; color: var(--text); }
+        .btn-instagram { background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); color: white; text-decoration: none; }
+
+        /* MODAL STYLES */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(8px); z-index: 2000; align-items: center; justify-content: center; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; padding: 30px; border-radius: 15px; width: 90%; max-width: 600px; max-height: 80vh; position: relative; display: flex; flex-direction: column; }
+        .modal-scroll-area { overflow-y: auto; margin-top: 15px; line-height: 1.6; font-size: 14px; }
+        .close-button { position: absolute; top: 15px; right: 20px; font-size: 28px; cursor: pointer; color: #999; }
+        .btn-close { margin-top: 20px; padding: 10px 25px; background: var(--accent); color: white; border: none; border-radius: 20px; cursor: pointer; align-self: center; }
+        .footer { margin-top: 30px; text-align: center; font-size: 10px; }
+        .footer a { color: var(--accent); text-decoration: none; margin: 0 10px; text-transform: uppercase; letter-spacing: 1px; }
+    </style>
+</head>
+<body>
+
+<div class="app">
+    <header>
+        <img src="/static/logo.png" alt="Logo" class="logo-img">
+        <h1>Cafe <span>Caption</span></h1>
+    </header>
+    
+    <div id="user-info" style="display: none; margin-bottom: 15px; font-size: 12px; color: var(--accent); text-align: center;">
+        <span id="display-email"></span> | <span id="user-credits"></span>
+    </div>
+
+    <div class="card">
+        <label>Cafe Name</label>
+        <input type="text" id="name" placeholder="Name of your space..." oninput="localStorage.setItem('name', this.value)">
+
+        <label>Mood</label>
+        <div class="segments">
+            <div class="seg active" onclick="setV('mood','Poetic',this)">Poetic</div>
+            <div class="seg" onclick="setV('mood','Minimal',this)">Minimal</div>
+            <div class="seg" onclick="setV('mood','Witty',this)">Witty</div>
+        </div>
+
+        <label>Target Audience</label>
+        <div class="segments">
+            <div class="seg active" onclick="setV('target','Freelancers',this)">💻 Pros</div>
+            <div class="seg" onclick="setV('target','Couples',this)">👩‍❤️‍👨 Date</div>
+            <div class="seg" onclick="setV('target','Coffee Geeks',this)">☕️ Geeks</div>
+            <div class="seg" onclick="setV('target','Families',this)">🧸 Family</div>
+        </div>
+       
+        <label>Focus</label>
+        <div class="segments">
+            <div class="seg active" onclick="setV('goal','Atmosphere',this)">Atmosphere</div>
+            <div class="seg" onclick="setV('goal','Drinks',this)">Drinks</div>
+            <div class="seg" onclick="setV('goal','Food',this)">Food</div>
+            <div class="seg" onclick="setV('goal','People',this)">People</div>
+            <div class="seg" onclick="setV('goal','Daily',this)">Daily</div>
+        </div>
+
+        <div style="text-align: center; margin-bottom: 15px;">
+            <span onclick="document.getElementById('adv-settings').style.display = (document.getElementById('adv-settings').style.display === 'none' ? 'block' : 'none')" 
+                  style="font-size: 11px; color: var(--accent); cursor: pointer; border-bottom: 1px dashed var(--accent);">
+                ⚙️ Advanced Settings
+            </span>
+        </div>
+
+        <div id="adv-settings" style="display: none; margin-bottom: 20px; padding: 15px; background: #f9f9f9; border-radius: 12px;">
+            <label>Language</label>
+            <div class="segments">
+                <div class="seg active" onclick="setV('lang','English',this)">EN</div>
+                <div class="seg" onclick="setV('lang','German',this)">DE</div>
+                <div class="seg" onclick="setV('lang','French',this)">FR</div>
+                <div class="seg" onclick="setV('lang','Russian',this)">RU</div>
+            </div>
+            <label>Weather</label>
+            <div class="segments">
+                <div class="seg active" onclick="setV('weather','Random',this)">Auto</div>
+                <div class="seg" onclick="setV('weather','Sunny',this)">Sunny</div>
+                <div class="seg" onclick="setV('weather','Rainy',this)">Rainy</div>
+            </div>
+            <label>Time</label>
+            <div class="segments">
+                <div class="seg active" onclick="setV('time','Random',this)">Auto</div>
+                <div class="seg" onclick="setV('time','Morning',this)">Morning</div>
+                <div class="seg" onclick="setV('time','Evening',this)">Evening</div>
+            </div>
+            <label>Event (Optional)</label>
+            <input type="text" id="event" placeholder="e.g. 1+1 on Latte..." oninput="state.event = this.value">
+        </div>
+
+        <button class="btn-main" id="go" onclick="brew()">Brew Content</button>
+        <button class="btn-premium" id="go-week" onclick="brewWeek()">✨ Week Generator (7 Posts)</button>
+    </div>
+
+    <footer class="footer">
+        <a href="javascript:void(0)" onclick="openModal('privacy')">Privacy Policy</a>
+        <a href="javascript:void(0)" onclick="openModal('terms')">Terms of Service</a>
+        <a href="javascript:void(0)" onclick="openModal('refund')">Refund Policy</a>
+    </footer>
+</div>
+
+<div class="overlay" id="blur" onclick="toggleAll()"></div>
+
+<div class="sheet" id="resultSheet">
+    <div id="results-container"></div>
+</div>
+
+<div class="sheet" id="priceSheet">
+    <h3 style="text-align:center; font-family: 'Fraunces', serif; margin-top: 0;">Coffee Menu</h3>
+    <p style="text-align:center; font-size: 13px; margin-bottom: 25px;">You're out of beans! Choose your plan:</p>
+    <button class="btn-main" onclick="buy('monthly')" style="margin-bottom:12px;">$9 — 30 Credits / Mo</button>
+    <button class="btn-premium" onclick="buy('yearly')">$80 — 365 Credits / Year</button>
+    <button class="btn-sub" onclick="togglePriceSheet(false)" style="width:100%; margin-top: 15px;">Maybe later</button> 
+</div>
+
+<div id="legalModal" class="modal-overlay">
+    <div class="modal-content">
+        <span class="close-button" onclick="closeModal()">&times;</span>
+        <h2 id="modalTitle" style="font-family: 'Fraunces', serif; margin: 0;"></h2>
+        <div id="modalBody" class="modal-scroll-area"></div>
+        <button onclick="closeModal()" class="btn-close">Close</button>
+    </div>
+</div>
+
+<script>
+const _supabase = supabase.createClient('https://fhfxpwgqnwnlafekmmrm.supabase.co', 'sb_publishable_0pLQ3vw_4N55UL-XCiytmA_Jl0HkYEh');
+
+let state = { lang: 'English', mood: 'Poetic', goal: 'Atmosphere', target: 'Freelancers', weather: 'Random', time: 'Random', event: '' };
+
+const legalTexts = {
+    privacy: { 
+        title: "Privacy Policy", 
+        content: `
+            <p><strong>1. Data Collection:</strong> We collect your email via Google OAuth to manage your account and credits.</p>
+            <p><strong>2. Payments:</strong> Transactions are handled by Stripe. We do not store your credit card details.</p>
+            <p><strong>3. AI Training:</strong> We save your "liked" posts to improve the AI model's understanding of your brand voice, ensuring personalized content over time.</p>
+            <p><strong>4. Third Parties:</strong> Your prompts are processed by OpenAI/Groq. No personal identity is shared with these providers.</p>
+        ` 
+    },
+    terms: { 
+        title: "Terms of Service", 
+        content: `
+            <p><strong>1. Service:</strong> Cafe Caption provides AI-generated ideas and captions for social media.</p>
+            <p><strong>2. Subscriptions:</strong> "Monthly Brew" and "Annual Master" are recurring subscriptions. You can cancel anytime in your profile.</p>
+            <p><strong>3. Credits:</strong> 1 generation = 1 credit. 7-day trial credits are for new users only.</p>
+            <p><strong>4. Content Ownership:</strong> You own the generated content. Cafe Caption is not liable for how these posts perform or any business impact.</p>
+        ` 
+    },
+    refund: { 
+        title: "Refund Policy", 
+        content: `
+            <p><strong>1. Digital Nature:</strong> Since our service provides immediate digital content via AI, we generally do not offer refunds once credits have been used.</p>
+            <p><strong>2. Free Trial:</strong> We provide 7 free credits so you can test the quality before purchasing.</p>
+            <p><strong>3. Exceptions:</strong> If you experience technical failure where credits were deducted but no content was shown, contact us for a manual credit top-up.</p>
+        ` 
+    }
+};
+
+function openModal(type) {
+    const modal = document.getElementById('legalModal');
+    document.getElementById('modalTitle').innerText = legalTexts[type].title;
+    document.getElementById('modalBody').innerHTML = legalTexts[type].content;
+    modal.classList.add('active');
+}
+
+function closeModal() {
+    document.getElementById('legalModal').classList.remove('active');
+}
+
+function setV(key, val, el) {
+    state[key] = val;
+    const siblings = el.parentElement.children;
+    for (let s of siblings) s.classList.remove('active');
+    el.classList.add('active');
+}
+
+async function brew() {
+    const { data: { user } } = await _supabase.auth.getUser();
+    if (!user) {
+        localStorage.setItem('temp_name', document.getElementById('name').value);
+        localStorage.setItem('auto_brew', 'true');
+        return loginWithGoogle();
+    }
+    executeGeneration(user.email, 1);
+}
+
+async function brewWeek() {
+    const { data: { user } } = await _supabase.auth.getUser();
+    if (!user) return loginWithGoogle();
+    executeGeneration(user.email, 7);
+}
+
+async function loginWithGoogle() {
+    await _supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
+}
+
+function togglePriceSheet(show) {
+    document.getElementById('priceSheet').style.bottom = show ? '0' : '-100%';
+    document.getElementById('blur').style.display = show ? 'block' : 'none';
+}
+
+function toggleAll() {
+    document.getElementById('resultSheet').style.bottom = '-100%';
+    document.getElementById('priceSheet').style.bottom = '-100%';
+    document.getElementById('blur').style.display = 'none';
+}
+
+function copyText(text, btn) {
+    navigator.clipboard.writeText(text).then(() => {
+        const orig = btn.innerText;
+        btn.innerText = "Copied!";
+        setTimeout(() => btn.innerText = orig, 2000);
+    });
+}
+
+async function buy(plan) {
+    const { data: { user } } = await _supabase.auth.getUser();
+    if (!user) return;
+    
+    const res = await fetch('/create-checkout-session', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ email: user.email, plan: plan })
+    });
+    const d = await res.json();
+    if (d.url) window.location.href = d.url;
+}
+
+async function updateCreditsDisplay(email) {
+    try {
+        const res = await fetch(`/get-credits?email=${encodeURIComponent(email)}`);
+        const data = await res.json();
+        if (data && data.credits !== undefined) {
+            document.getElementById('user-info').style.display = 'block';
+            document.getElementById('display-email').innerText = email;
+            document.getElementById('user-credits').innerText = data.is_premium ? "Premium Plan" : `${data.credits} beans left`;
+        }
+    } catch(e) { console.error(e); }
+}
+
+async function executeGeneration(email, count) {
+    const btn = count === 7 ? document.getElementById('go-week') : document.getElementById('go');
+    const originalText = btn.innerText;
+    btn.innerText = "Steeping...";
+    btn.disabled = true;
+
+    try {
+        const res = await fetch('/generate', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                email: email,
+                cafe_name: document.getElementById('name').value,
+                language: state.lang,
+                mood: state.mood,
+                target: state.target,
+                goal: state.goal,
+                weather: state.weather,
+                time: state.time,
+                event: state.event,
+                variants: count
+            })
+        });
+        
+        const result = await res.json();
+        btn.innerText = originalText;
+        btn.disabled = false;
+
+        if (result.error === "credits_depleted") {
+            return togglePriceSheet(true);
+        }
+
+        if (result.texts && result.texts.length > 0) {
+            const container = document.getElementById('results-container');
+            container.innerHTML = `<h3 style="font-family: 'Fraunces', serif; text-align:center; margin-top:0;">Freshly Brewed</h3>`;
+            
+            result.texts.forEach((postText, index) => {
+                const parts = postText.split('|');
+                const caption = parts[0] ? parts[0].trim() : '';
+                const photo = parts[1] ? parts[1].trim() : '';
+                
+                const receipt = document.createElement('div');
+                receipt.className = 'receipt';
+                receipt.innerHTML = `
+                    <div style="font-size:11px; color:#999; margin-bottom:10px;">POST ${index + 1} OF ${result.texts.length}</div>
+                    <div class="content-to-copy">${caption}</div>
+                    ${photo ? `<div class="photo-tip">📸 Direction: ${photo}</div>` : ''}
+                    <div class="actions">
+                        <button class="action-btn btn-copy" onclick="copyText('${caption.replace(/'/g, "\\'")}', this)">Copy Caption</button>
+                        <a class="action-btn btn-instagram" href="https://instagram.com" target="_blank">Open IG</a>
+                    </div>
+                `;
+                container.appendChild(receipt);
+            });
+
+            document.getElementById('resultSheet').style.bottom = '0';
+            document.getElementById('blur').style.display = 'block';
+            await updateCreditsDisplay(email);
+        } else {
+            alert(result.error || "An error occurred during generation.");
+        }
+    } catch(e) {
+        btn.innerText = originalText;
+        btn.disabled = false;
+        alert("Connection failure. Please try again.");
+    }
+}
+
+window.addEventListener('load', async () => {
+    if (localStorage.getItem('name')) {
+        document.getElementById('name').value = localStorage.getItem('name');
+    }
+    const { data: { user } } = await _supabase.auth.getUser();
+    if (user) {
+        await updateCreditsDisplay(user.email);
+        if (localStorage.getItem('auto_brew') === 'true') {
+            localStorage.removeItem('auto_brew');
+            if (localStorage.getItem('temp_name')) {
+                document.getElementById('name').value = localStorage.getItem('temp_name');
+                localStorage.removeItem('temp_name');
+            }
+            executeGeneration(user.email, 1);
+        }
+    }
+});
+</script>
+</body>
+</html>
