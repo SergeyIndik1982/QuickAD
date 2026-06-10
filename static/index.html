@@ -69,8 +69,12 @@
     <div class="card">
         <label>Cafe Name</label>
         <input type="text" id="name" placeholder="Name of your space..." oninput="localStorage.setItem('name', this.value)">
+ </div>
+            <label>Event (Optional)</label>
+            <input type="text" id="event" placeholder="e.g. 1+1 on Latte..." oninput="state.event = this.value">
+        </div>
 
-        <label>Mood</label>
+    <label>Mood</label>
         <div class="segments">
             <div class="seg active" onclick="setV('mood','Poetic',this)">Poetic</div>
             <div class="seg" onclick="setV('mood','Minimal',this)">Minimal</div>
@@ -120,10 +124,7 @@
                 <div class="seg active" onclick="setV('time','Random',this)">Auto</div>
                 <div class="seg" onclick="setV('time','Morning',this)">Morning</div>
                 <div class="seg" onclick="setV('time','Evening',this)">Evening</div>
-            </div>
-            <label>Event (Optional)</label>
-            <input type="text" id="event" placeholder="e.g. 1+1 on Latte..." oninput="state.event = this.value">
-        </div>
+           
 
         <button class="btn-main" id="go" onclick="brew()">Brew Content</button>
         <button class="btn-premium" id="go-week" onclick="brewWeek()">✨ Week Generator (7 Posts)</button>
