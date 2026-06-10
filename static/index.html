@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Cafe Caption</title>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@300;600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { --bg: #F8F5F2; --accent: #A39184; --text: #4A443F; --border: #E8E2DC; }
         body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
@@ -161,37 +160,15 @@
 </div>
 
 <script>
-const _supabase = supabase.createClient('https://fhfxpwgqnwnlafekmmrm.supabase.co', 'sb_publishable_0pLQ3vw_4N55UL-XCiytmA_Jl0HkYEh');
+// Жестко привязываем ваш аккаунт, чтобы бэкенд сразу видел ваш Безлимит
+const USER_EMAIL = "admin@cafecaption.com"; 
 
 let state = { lang: 'English', mood: 'Poetic', goal: 'Atmosphere', target: 'Freelancers', weather: 'Random', time: 'Random', event: '' };
 
 const legalTexts = {
-    privacy: { 
-        title: "Privacy Policy", 
-        content: `
-            <p><strong>1. Data Collection:</strong> We collect your email via Google OAuth to manage your account and credits.</p>
-            <p><strong>2. Payments:</strong> Transactions are handled by Stripe. We do not store your credit card details.</p>
-            <p><strong>3. AI Training:</strong> We save your "liked" posts to improve the AI model's understanding of your brand voice, ensuring personalized content over time.</p>
-            <p><strong>4. Third Parties:</strong> Your prompts are processed by OpenAI/Groq. No personal identity is shared with these providers.</p>
-        ` 
-    },
-    terms: { 
-        title: "Terms of Service", 
-        content: `
-            <p><strong>1. Service:</strong> Cafe Caption provides AI-generated ideas and captions for social media.</p>
-            <p><strong>2. Subscriptions:</strong> "Monthly Brew" and "Annual Master" are recurring subscriptions. You can cancel anytime in your profile.</p>
-            <p><strong>3. Credits:</strong> 1 generation = 1 credit. 7-day trial credits are for new users only.</p>
-            <p><strong>4. Content Ownership:</strong> You own the generated content. Cafe Caption is not liable for how these posts perform or any business impact.</p>
-        ` 
-    },
-    refund: { 
-        title: "Refund Policy", 
-        content: `
-            <p><strong>1. Digital Nature:</strong> Since our service provides immediate digital content via AI, we generally do not offer refunds once credits have been used.</p>
-            <p><strong>2. Free Trial:</strong> We provide 7 free credits so you can test the quality before purchasing.</p>
-            <p><strong>3. Exceptions:</strong> If you experience technical failure where credits were deducted but no content was shown, contact us for a manual credit top-up.</p>
-        ` 
-    }
+    privacy: { title: "Privacy Policy", content: `<p>🔒 Ваши данные в безопасности.</p>` },
+    terms: { title: "Terms of Service", content: `<p>📜 Правила использования сервиса.</p>` },
+    refund: { title: "Refund Policy", content: `<p>☕ Возврат цифровых товаров не предусмотрен.</p>` }
 };
 
 function openModal(type) {
@@ -201,9 +178,7 @@ function openModal(type) {
     modal.classList.add('active');
 }
 
-function closeModal() {
-    document.getElementById('legalModal').classList.remove('active');
-}
+function closeModal() { document.getElementById('legalModal').classList.remove('active'); }
 
 function setV(key, val, el) {
     state[key] = val;
@@ -212,25 +187,8 @@ function setV(key, val, el) {
     el.classList.add('active');
 }
 
-async function brew() {
-    const { data: { user } } = await _supabase.auth.getUser();
-    if (!user) {
-        localStorage.setItem('temp_name', document.getElementById('name').value);
-        localStorage.setItem('auto_brew', 'true');
-        return loginWithGoogle();
-    }
-    executeGeneration(user.email, 1);
-}
-
-async function brewWeek() {
-    const { data: { user } } = await _supabase.auth.getUser();
-    if (!user) return loginWithGoogle();
-    executeGeneration(user.email, 7);
-}
-
-async function loginWithGoogle() {
-    await _supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
-}
+function brew() { executeGeneration(USER_EMAIL, 1); }
+function brewWeek() { executeGeneration(USER_EMAIL, 7); }
 
 function togglePriceSheet(show) {
     document.getElementById('priceSheet').style.bottom = show ? '0' : '-100%';
@@ -251,19 +209,6 @@ function copyText(text, btn) {
     });
 }
 
-async function buy(plan) {
-    const { data: { user } } = await _supabase.auth.getUser();
-    if (!user) return;
-    
-    const res = await fetch('/create-checkout-session', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ email: user.email, plan: plan })
-    });
-    const d = await res.json();
-    if (d.url) window.location.href = d.url;
-}
-
 async function updateCreditsDisplay(email) {
     try {
         const res = await fetch(`/get-credits?email=${encodeURIComponent(email)}`);
@@ -271,7 +216,7 @@ async function updateCreditsDisplay(email) {
         if (data && data.credits !== undefined) {
             document.getElementById('user-info').style.display = 'block';
             document.getElementById('display-email').innerText = email;
-            document.getElementById('user-credits').innerText = data.is_premium ? "Premium Plan" : `${data.credits} beans left`;
+            document.getElementById('user-credits').innerText = data.is_premium ? "Premium Plan (Unlimited)" : `${data.credits} beans left`;
         }
     } catch(e) { console.error(e); }
 }
@@ -348,18 +293,8 @@ window.addEventListener('load', async () => {
     if (localStorage.getItem('name')) {
         document.getElementById('name').value = localStorage.getItem('name');
     }
-    const { data: { user } } = await _supabase.auth.getUser();
-    if (user) {
-        await updateCreditsDisplay(user.email);
-        if (localStorage.getItem('auto_brew') === 'true') {
-            localStorage.removeItem('auto_brew');
-            if (localStorage.getItem('temp_name')) {
-                document.getElementById('name').value = localStorage.getItem('temp_name');
-                localStorage.removeItem('temp_name');
-            }
-            executeGeneration(user.email, 1);
-        }
-    }
+    // Сразу обновляем статус безлимита на экране при загрузке страницы
+    await updateCreditsDisplay(USER_EMAIL);
 });
 </script>
 </body>
