@@ -192,6 +192,247 @@ const legalTexts = {
             <p><strong>3. Exceptions:</strong> If you experience technical failure where credits were deducted but no content was shown, contact us for a manual credit top-up.</p>
         ` 
     }
+};
+
+function openModal(type) {
+    const modal = document.getElementById('legalModal');
+    document.getElementById('modalTitle').innerText = legalTexts[type].title;
+    document.getElementById('modalBody').innerHTML = legalTexts[type].content;
+    modal.classList.add('active');
+}
+
+function closeModal() {
+    document.getElementById('legalModal').classList.remove('active');
+}
+
+function setV(key, val, el) {
+    state[key] = val;
+    const siblings = el.parentElement.children;
+    for (let s of siblings) s.classList.remove('active');
+    el.classList.add('active');
+}
+
+async function brew() {
+    const { data: { user } } = await _supabase.auth.getUser();
+    if (!user) {
+        localStorage.setItem('temp_name', document.getElementById('name').value);
+        localStorage.setItem('auto_brew', 'true');
+        return loginWithGoogle();
+    }
+    executeGeneration(user.email, 1);
+}
+
+async function brewWeek() {
+    const { data: { user } } = await _supabase.auth.getUser();
+    if (!user) return loginWithGoogle();
+    executeGeneration(user.email, 7);
+}
+
+async function loginWithGoogle() {
+    await _supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
+}
+
+function togglePriceSheet(show) {
+    document.getElementById('priceSheet').style.bottom = show ? '0' : '-100%';
+    document.getElementById('blur').style.display = show ? 'block' : 'none';
+}
+
+function toggleAll() {
+    document.getElementById('resultSheet').style.bottom = '-100%';
+    document.getElementById('priceSheet').style.bottom = '-100%';
+    document.getElementById('blur').style.display = 'none';
+}
+
+function copyText(text, btn) {
+    navigator.clipboard.writeText(text).then(() => {
+        const orig = btn.innerText;
+        btn.innerText = "Copied!";
+        setTimeout(() => btn.innerText = orig, 2000);
+    });
+}
+
+async function buy(plan) {
+    const { data: { user } } = await _supabase.auth.getUser();
+    if (!user) return;
+    
+    const res = await fetch('/create-checkout-session', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ email: user.email, plan: plan })
+    });
+    const d = await res.json();
+    if (d.url) window.location.href = d.url;
+}
+
+async function updateCreditsDisplay(email) {
+    try {
+        const res = await fetch(`/get-credits?email=${encodeURIComponent(email)}`);
+        const data = await res.json();
+        if (data && data.credits !== undefined) {
+            document.getElementById('user-info').style.display = 'block';
+            document.getElementById('display-email').innerText = email;
+            document.getElementById('user-credits').innerText = data.is_premium ? "Premium Plan" : `${data.credits} beans left`;
+        }
+    } catch(e) { console.error(e); }
+}
+
+async function executeGeneration(email, count) {
+    const btn = count === 7 ? document.getElementById('go-week') : document.getElementById('go');
+    const originalText = btn.innerText;
+    btn.innerText = "Steeping...";
+    btn.disabled = true;
+
+    try {
+        const res = await fetch('/generate', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                email: email,
+                cafe_name: document.getElementById('name').value,
+                language: state.lang,
+                mood: state.mood,
+                target: state.target,
+                goal: state.goal,
+                weather: state.weather,
+                time: state.time,
+                event: state.event,
+                variants: count
+            })
+        });
+        
+        const result = await res.json();
+        btn.innerText = originalText;
+        btn.disabled = false;
+
+        if (result.error === "credits_depleted") {
+            return togglePriceSheet(true);
+        }
+
+        if (result.texts && result.texts.length > 0) {
+            const container = document.getElementById('results-container');
+            container.innerHTML = `<h3 style="font-family: 'Fraunces', serif; text-align:center; margin-top:0;">Freshly Brewed</h3>`;
+            
+            result.texts.forEach((postText, index) => {
+                const parts = postText.split('|');
+                const caption = parts[0] ? parts[0].trim() : '';
+                const photo = parts[1] ? parts[1].trim() : '';
+                
+                const receipt = document.createElement('div');
+                receipt.className = 'receipt';
+                receipt.innerHTML = `
+                    <div style="font-size:11px; color:#999; margin-bottom:10px;">POST ${index + 1} OF ${result.texts.length}</div>
+                    <div class="content-to-copy">${caption}</div>
+                    ${photo ? `<div class="photo-tip">📸 Direction: ${photo}</div>` : ''}
+                    <div class="actions">
+                        <button class="action-btn btn-copy" onclick="copyText('${caption.replace(/'/g, "\\'")}', this)">Copy Caption</button>
+                        <a class="action-btn btn-instagram" href="https://instagram.com" target="_blank">Open IG</a>
+                    </div>
+                `;
+                container.appendChild(receipt);
+            });
+
+            document.getElementById('resultSheet').style.bottom = '0';
+            document.getElementById('blur').style.display = 'block';
+            await updateCreditsDisplay(email);
+        } else {
+            alert(result.error || "An error occurred during generation.");
+        }
+    } catch(e) {
+        btn.innerText = originalText;
+        btn.disabled = false;
+        alert("Connection failure. Please try again.");
+    }
+}
+
+window.addEventListener('load', async () => {
+    if (localStorage.getItem('name')) {
+        document.getElementById('name').value = localStorage.getItem('name');
+    }
+    const { data: { user } } = await _supabase.auth.getUser();
+    if (user) {
+        await updateCreditsDisplay(user.email);
+        if (localStorage.getItem('auto_brew') === 'true') {
+            localStorage.removeItem('auto_brew');
+            if (localStorage.getItem('temp_name')) {
+                document.getElementById('name').value = localStorage.getItem('temp_name');
+                localStorage.removeItem('temp_name');
+            }
+            executeGeneration(user.email, 1);
+        }
+    }
+});
+</script>
+</body>
+</html>            <label>Event (Optional)</label>
+            <input type="text" id="event" placeholder="e.g. 1+1 on Latte..." oninput="state.event = this.value">
+        </div>
+
+        <button class="btn-main" id="go" onclick="brew()">Brew Content</button>
+        <button class="btn-premium" id="go-week" onclick="brewWeek()">✨ Week Generator (7 Posts)</button>
+    </div>
+
+    <footer class="footer">
+        <a href="javascript:void(0)" onclick="openModal('privacy')">Privacy Policy</a>
+        <a href="javascript:void(0)" onclick="openModal('terms')">Terms of Service</a>
+        <a href="javascript:void(0)" onclick="openModal('refund')">Refund Policy</a>
+    </footer>
+</div>
+
+<div class="overlay" id="blur" onclick="toggleAll()"></div>
+
+<div class="sheet" id="resultSheet">
+    <div id="results-container"></div>
+</div>
+
+<div class="sheet" id="priceSheet">
+    <h3 style="text-align:center; font-family: 'Fraunces', serif; margin-top: 0;">Coffee Menu</h3>
+    <p style="text-align:center; font-size: 13px; margin-bottom: 25px;">You're out of beans! Choose your plan:</p>
+    <button class="btn-main" onclick="buy('monthly')" style="margin-bottom:12px;">$9 — 30 Credits / Mo</button>
+    <button class="btn-premium" onclick="buy('yearly')">$80 — 365 Credits / Year</button>
+    <button class="btn-sub" onclick="togglePriceSheet(false)" style="width:100%; margin-top: 15px;">Maybe later</button> 
+</div>
+
+<div id="legalModal" class="modal-overlay">
+    <div class="modal-content">
+        <span class="close-button" onclick="closeModal()">&times;</span>
+        <h2 id="modalTitle" style="font-family: 'Fraunces', serif; margin: 0;"></h2>
+        <div id="modalBody" class="modal-scroll-area"></div>
+        <button onclick="closeModal()" class="btn-close">Close</button>
+    </div>
+</div>
+
+<script>
+const _supabase = supabase.createClient('https://fhfxpwgqnwnlafekmmrm.supabase.co', 'sb_publishable_0pLQ3vw_4N55UL-XCiytmA_Jl0HkYEh');
+
+let state = { lang: 'English', mood: 'Poetic', goal: 'Atmosphere', target: 'Freelancers', weather: 'Random', time: 'Random', event: '' };
+
+const legalTexts = {
+    privacy: { 
+        title: "Privacy Policy", 
+        content: `
+            <p><strong>1. Data Collection:</strong> We collect your email via Google OAuth to manage your account and credits.</p>
+            <p><strong>2. Payments:</strong> Transactions are handled by Stripe. We do not store your credit card details.</p>
+            <p><strong>3. AI Training:</strong> We save your "liked" posts to improve the AI model's understanding of your brand voice, ensuring personalized content over time.</p>
+            <p><strong>4. Third Parties:</strong> Your prompts are processed by OpenAI/Groq. No personal identity is shared with these providers.</p>
+        ` 
+    },
+    terms: { 
+        title: "Terms of Service", 
+        content: `
+            <p><strong>1. Service:</strong> Cafe Caption provides AI-generated ideas and captions for social media.</p>
+            <p><strong>2. Subscriptions:</strong> "Monthly Brew" and "Annual Master" are recurring subscriptions. You can cancel anytime in your profile.</p>
+            <p><strong>3. Credits:</strong> 1 generation = 1 credit. 7-day trial credits are for new users only.</p>
+            <p><strong>4. Content Ownership:</strong> You own the generated content. Cafe Caption is not liable for how these posts perform or any business impact.</p>
+        ` 
+    },
+    refund: { 
+        title: "Refund Policy", 
+        content: `
+            <p><strong>1. Digital Nature:</strong> Since our service provides immediate digital content via AI, we generally do not offer refunds once credits have been used.</p>
+            <p><strong>2. Free Trial:</strong> We provide 7 free credits so you can test the quality before purchasing.</p>
+            <p><strong>3. Exceptions:</strong> If you experience technical failure where credits were deducted but no content was shown, contact us for a manual credit top-up.</p>
+        ` 
+    }
 };;
 
 function openModal(type) {
