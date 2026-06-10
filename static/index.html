@@ -69,7 +69,9 @@
     <div class="card">
         <label>Cafe Name</label>
         <input type="text" id="name" placeholder="Name of your space..." oninput="localStorage.setItem('name', this.value)">
-
+        
+        <label>Event (Optional)</label>
+        <input type="text" id="event" placeholder="e.g. 1+1 on Latte..." oninput="state.event = this.value">
 
     <label>Mood</label>
         <div class="segments">
@@ -122,8 +124,7 @@
                 <div class="seg" onclick="setV('time','Morning',this)">Morning</div>
                 <div class="seg" onclick="setV('time','Evening',this)">Evening</div>
             </div>
-            <label>Event (Optional)</label>
-            <input type="text" id="event" placeholder="e.g. 1+1 on Latte..." oninput="state.event = this.value">
+            
         </div>
 
         <button class="btn-main" id="go" onclick="brew()">Brew Content</button>
